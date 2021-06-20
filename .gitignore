@@ -1,6 +1,7 @@
 # Directory of Dutch explanation
 Orders/
 Docs/
+slprj/
 
 # Ignore Mac system files
 .DS_store
