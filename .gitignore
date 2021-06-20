@@ -1,0 +1,6 @@
+# Directory of Dutch explanation
+Orders/
+Docs/
+
+# Ignore Mac system files
+.DS_store
