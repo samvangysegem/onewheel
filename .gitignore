@@ -5,3 +5,6 @@ slprj/
 
 # Ignore Mac system files
 .DS_store
+
+# Files
+# NOTES.md
