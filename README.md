@@ -17,3 +17,4 @@ The goal of this project is to build a one-wheeled robot from scratch. This incl
 - [ ] Circuit design
 - [ ] Coding
 - [ ] 3D printing parts and assembly
+- [ ] Countless hours of debugging untill this thing will work

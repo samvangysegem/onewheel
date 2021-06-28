@@ -41,7 +41,7 @@ MPU6050 mpu;
 
 // Usefull macros
 #define DPRINTSTIMER(t)    for (static unsigned long SpamTimer; (unsigned long)(millis() - SpamTimer) >= (t); SpamTimer = millis())
-#define DPRINTSFN(StrSize,Name,...) {char S[StrSize];Serial.print("\t");Serial.print(Name);Serial.print(" "); Serial.print(dtostrf((float)__VA_ARGS__ ,S));}//StringSize,Name,Variable,Spaces,Percision
+#define DPRINTSFN(StrSize,Name,...) {char S[StrSize];Serial.print("\t");Serial.print(Name);Serial.print(" "); Serial.print(dtostrf((float)__VA_ARGS__ ,S));} //StringSize,Name,Variable,Spaces,Percision
 #define DPRINTLN(...)      Serial.println(__VA_ARGS__)
 
 #define INTERRUPT_PIN 2 // All pins have interrupt capability on Teensy

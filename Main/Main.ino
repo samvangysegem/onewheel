@@ -11,7 +11,7 @@
 #ifdef DEBUG
 //#define DPRINT(args...)  Serial.print(args)             //OR use the following syntax:
 #define DPRINTSTIMER(t)    for (static unsigned long SpamTimer; (unsigned long)(millis() - SpamTimer) >= (t); SpamTimer = millis())
-#define  DPRINTSFN(StrSize,Name,...) {char S[StrSize];Serial.print("\t");Serial.print(Name);Serial.print(" "); Serial.print(dtostrf((float)__VA_ARGS__ ,S));}//StringSize,Name,Variable,Spaces,Percision
+#define DPRINTSFN(StrSize,Name,...) {char S[StrSize];Serial.print("\t");Serial.print(Name);Serial.print(" "); Serial.print(dtostrf((float)__VA_ARGS__ ,S));} //StringSize,Name,Variable,Spaces,Percision
 #define DPRINTLN(...)      Serial.println(__VA_ARGS__)
 #else
 #define DPRINTSTIMER(t)    if(false)
@@ -25,15 +25,14 @@
 
 // Installed libraries
 #include <Wire.h>
-#include <I2Cdev.h>
-
+#include <I2Cdev.h>d
 // #include "MPU6050.h"
 #include <MPU6050_6Axis_MotionApps20.h>
 
 // Custom libraries
 #include "Kalman.h"
 
-int MPUOffsets[6] = {-987,-1278,1197,-14,73,97};
+int MPUOffsets[6] = {-990,-1285,1185,-14,71,95};
 #define LED_PIN 13
 
 // ================================================================
@@ -41,12 +40,12 @@ int MPUOffsets[6] = {-987,-1278,1197,-14,73,97};
 // ================================================================
 void i2cSetup() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-  Wire.begin();
-  Wire.setClock(400000); // 400kHz I2C clock (200kHz if CPU is 8MHz)
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-  Fastwire::setup(400, true);
-#endif
+  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    Wire.begin();
+    Wire.setClock(400000); // 400kHz I2C clock (200kHz if CPU is 8MHz)
+  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Fastwire::setup(400, true);
+  #endif
 }
 
 // ================================================================

@@ -1,4 +1,4 @@
-## Personal Notes
+## Mechanical Design
 
 ### Flywheel Design
 3D printed wheel lacks the weight to fulfill the role of a flywheel. Therefore, a number of bolts are added at a large outside diameter to increase the total moment of inertia.
@@ -33,4 +33,9 @@ Calculator: https://www.bbman.com/belt-length-calculator/
 
 * Belt: 220mm length
     * Online store: https://nl.rs-online.com/web/p/timing-belts/4745347/
+
+## Software Design
+
+### MPU6050
+Calibration is required to guarantee correct operating behaviour. This can be achieved through the MPU 6050 library in the Arduino IDE, example sketch "IMU_Zero.ino". Calibration is best performed before installing the sensor on the robot in order to yield optimal results on a flat surface.
 
