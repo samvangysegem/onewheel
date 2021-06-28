@@ -2,12 +2,10 @@
 // ===                         ONEDUINO                         ===
 // ================================================================
 
-//           X Accel  Y Accel  Z Accel   X Gyro   Y Gyro   Z Gyro
-//OFFSETS     -987,   -1278,    1197,     -14,      73,      97
-
 // https://forum.arduino.cc/index.php?topic=408980.0 Post nr 4
 
 #define DEBUG
+
 #ifdef DEBUG
 //#define DPRINT(args...)  Serial.print(args)             //OR use the following syntax:
 #define DPRINTSTIMER(t)    for (static unsigned long SpamTimer; (unsigned long)(millis() - SpamTimer) >= (t); SpamTimer = millis())
@@ -25,7 +23,7 @@
 
 // Installed libraries
 #include <Wire.h>
-#include <I2Cdev.h>d
+#include <I2Cdev.h>
 // #include "MPU6050.h"
 #include <MPU6050_6Axis_MotionApps20.h>
 
@@ -36,7 +34,7 @@ int MPUOffsets[6] = {-990,-1285,1185,-14,71,95};
 #define LED_PIN 13
 
 // ================================================================
-// ===                      i2c SETUP Items                     ===
+// ===                      I2C SETUP Items                     ===
 // ================================================================
 void i2cSetup() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -51,7 +49,7 @@ void i2cSetup() {
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
 // ================================================================
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+volatile bool mpuInterrupt = false;
 
 void dmpDataReady() {
   mpuInterrupt = true;
@@ -84,11 +82,11 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 byte StartUP = 100;     // lets get 100 readings from the MPU before we start trusting them
 
 void MPU6050Connect() {
-  static int MPUInitCntr = 0;
+  static int MPUInitCntr = 0; // Static: not deleted when function ends which allows values to be reused in subsequent function calls
   // Initialize device
-  mpu.initialize(); // same
+  mpu.initialize();
   // Load and configure the DMP
-  devStatus = mpu.dmpInitialize(); // same
+  devStatus = mpu.dmpInitialize();
 
   if (devStatus != 0) {
     // ERROR!
@@ -96,7 +94,7 @@ void MPU6050Connect() {
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
 
-    char * StatStr[5] { "No Error", "initial memory load failed", "DMP configuration updates failed", "3", "4"};
+    char * StatStr[5] { "No Error", "Initial memory load failed", "DMP configuration updates failed", "3", "4"};
 
     MPUInitCntr++;
 
@@ -106,7 +104,7 @@ void MPU6050Connect() {
     Serial.print(StatStr[devStatus]);
     Serial.println(F(")"));
 
-    if (MPUInitCntr >= 10) return; //only try 10 times
+    if (MPUInitCntr >= 10) return; //only try 10 times (works because static)
     delay(1000);
     MPU6050Connect(); // Lets try again
     return;
@@ -164,12 +162,12 @@ void MPUMath() {
   mpu.dmpGetQuaternion(&q, fifoBuffer);
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+  
   Yaw = (ypr[0] * 180.0 / M_PI);
   Pitch = (ypr[1] *  180.0 / M_PI);
   Roll = (ypr[2] *  180.0 / M_PI);
  
-  
-  DPRINTSTIMER(100) {
+  DPRINTSTIMER(200) {
     DPRINTSFN(15, " W:", q.w, -6, 4);
     DPRINTSFN(15, " X:", q.x, -6, 4);
     DPRINTSFN(15, " Y:", q.y, -6, 4);
@@ -208,7 +206,7 @@ void loop() {
     _ETimer += (10);
     mpuInterrupt = true;
   }
-  if (mpuInterrupt ) { // wait for MPU interrupt or extra packet(s) available
+  if (mpuInterrupt) { // wait for MPU interrupt or extra packet(s) available
     GetDMP();
   }
 }
