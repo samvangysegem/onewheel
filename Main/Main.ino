@@ -7,7 +7,6 @@
 #define DEBUG
 
 #ifdef DEBUG
-//#define DPRINT(args...)  Serial.print(args)             //OR use the following syntax:
 #define DPRINTSTIMER(t)    for (static unsigned long SpamTimer; (unsigned long)(millis() - SpamTimer) >= (t); SpamTimer = millis())
 #define DPRINTSFN(StrSize,Name,...) {char S[StrSize];Serial.print("\t");Serial.print(Name);Serial.print(" "); Serial.print(dtostrf((float)__VA_ARGS__ ,S));} //StringSize,Name,Variable,Spaces,Percision
 #define DPRINTLN(...)      Serial.println(__VA_ARGS__)
@@ -30,7 +29,6 @@
 // Custom libraries
 #include "Kalman.h"
 
-int MPUOffsets[6] = {-990,-1285,1185,-14,71,95};
 #define LED_PIN 13
 
 // ================================================================
@@ -47,12 +45,21 @@ void i2cSetup() {
 }
 
 // ================================================================
-// ===               INTERRUPT DETECTION ROUTINE                ===
+// ===                  CONTROL LOOP INTERRUPT                  ===
 // ================================================================
-volatile bool mpuInterrupt = false;
+// Up to 4 intervaltimers can run simultaneously. They trigger the
+// associated interrupts methods at a fixed frequency.
+volatile bool controlInterrupt = false;
 
-void dmpDataReady() {
-  mpuInterrupt = true;
+void controlInterruptHandler() {
+  controlInterrupt = true;
+}
+
+IntervalTimer controlTimer;
+
+void timersSetup() {
+  controlTimer.priority(1);
+  controlTimer.begin(controlInterruptHandler, 100000); // Update frequency of 10 Hz
 }
 
 // ================================================================
@@ -60,7 +67,7 @@ void dmpDataReady() {
 // ================================================================
 MPU6050 mpu;
 
-int FifoAlive = 0; // tests if the interrupt is triggering
+int FifoAlive = 0;     // tests if the interrupt is triggering
 int IsAlive = -20;     // counts interrupt start at -20 to get 20+ good values before assuming connected
 
 // MPU control/status vars
@@ -80,6 +87,8 @@ VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 byte StartUP = 100;     // lets get 100 readings from the MPU before we start trusting them
+
+int MPUOffsets[6] = {-990,-1285,1185,-14,71,95};
 
 void MPU6050Connect() {
   static int MPUInitCntr = 0; // Static: not deleted when function ends which allows values to be reused in subsequent function calls
@@ -127,17 +136,17 @@ void MPU6050Connect() {
   packetSize = mpu.dmpGetFIFOPacketSize();
   delay(1000); // Let it Stabelize
   mpu.resetFIFO(); // Clear fifo buffer
-  mpuInterrupt = false; // wait for next interrupt
 }
 
 // ================================================================
 // ===                    MPU DMP Get Data                      ===
 // ================================================================
-void GetDMP() { // Best version I have made so far
+void GetDMP() { 
+  // Best version I have made so far
   // Serial.println(F("FIFO interrupt at:"));
   // Serial.println(micros());
   static unsigned long LastGoodPacketTime;
-  mpuInterrupt = false;
+  // mpuInterrupt = false;
   FifoAlive = 1;
   fifoCount = mpu.getFIFOCount();
   if ((!fifoCount) || (fifoCount % packetSize)) { // we have failed Reset and wait till next time!
@@ -155,6 +164,26 @@ void GetDMP() { // Best version I have made so far
 }
 
 // ================================================================
+// ===                    MPU Polling Data                      ===
+// ================================================================
+// Alternative to GetDMP without use of interrupts
+
+void pollDMP() {
+  // Clear MPU value in order to get latest value
+  mpu.resetFIFO();
+  // Get current FIFO count
+  fifoCount = mpu.getFIFOCount();
+  // wait for correct available data length, should be a VERY short wait
+  while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+  // Read a packet from FIFO
+  mpu.getFIFOBytes(fifoBuffer, packetSize);
+  // Further calculations
+  MPUMath();
+  // Blink LED
+  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+}
+
+// ================================================================
 // ===                        MPU Math                          ===
 // ================================================================
 float Yaw, Pitch, Roll;
@@ -164,10 +193,10 @@ void MPUMath() {
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
   
   Yaw = (ypr[0] * 180.0 / M_PI);
-  Pitch = (ypr[1] *  180.0 / M_PI);
-  Roll = (ypr[2] *  180.0 / M_PI);
+  Pitch = (ypr[1] * 180.0 / M_PI);
+  Roll = (ypr[2] * 180.0 / M_PI);
  
-  DPRINTSTIMER(200) {
+  /*DPRINTSTIMER(200) {
     DPRINTSFN(15, " W:", q.w, -6, 4);
     DPRINTSFN(15, " X:", q.x, -6, 4);
     DPRINTSFN(15, " Y:", q.y, -6, 4);
@@ -180,19 +209,22 @@ void MPUMath() {
     DPRINTSFN(15, " Pitch:", ypr[1], -6, 2);
     DPRINTSFN(15, " Roll:", ypr[2], -6, 2);
     DPRINTLN();
-  }
+  }*/
 }
 
 // ================================================================
 // ===                         Setup                            ===
 // ================================================================
 void setup() {
-  Serial.begin(115200); //115200
-  while (!Serial);
+  Serial.begin(115200);
+  // Wait for Serial Monitor to be ready
+  while (!Serial); 
   Serial.println("i2cSetup");
   i2cSetup();
   Serial.println("MPU6050Connect");
   MPU6050Connect();
+  Serial.println("Interrupt Timers Setup");
+  timersSetup();
   Serial.println("Setup complete");
   pinMode(LED_PIN, OUTPUT);
 }
@@ -201,12 +233,16 @@ void setup() {
 // ===                          Loop                            ===
 // ================================================================
 void loop() {
-  static unsigned long _ETimer;
-  if ( millis() - _ETimer >= (10)) {
-    _ETimer += (10);
-    mpuInterrupt = true;
-  }
-  if (mpuInterrupt) { // wait for MPU interrupt or extra packet(s) available
-    GetDMP();
+  
+  if (controlInterrupt) {
+    // Turn update flag off
+    controlInterrupt = false;
+    // Get updated position data
+    pollDMP();
+    
+    DPRINTSFN(15, " Yaw:", Yaw, -6, 2);
+    DPRINTSFN(15, " Pitch:", Pitch, -6, 2);
+    DPRINTSFN(15, " Roll:", Roll, -6, 2);
+    DPRINTLN();
   }
 }

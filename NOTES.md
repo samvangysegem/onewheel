@@ -35,7 +35,23 @@ Calculator: https://www.bbman.com/belt-length-calculator/
     * Online store: https://nl.rs-online.com/web/p/timing-belts/4745347/
 
 ## Software Design
+Control is split up in forwards and sideways control, assuming independent systems (which off course is not correct but for sufficiently small deviations should provide a good approach to control). 
 
 ### MPU6050
 Calibration is required to guarantee correct operating behaviour. This can be achieved through the MPU 6050 library in the Arduino IDE, example sketch "IMU_Zero.ino". Calibration is best performed before installing the sensor on the robot in order to yield optimal results on a flat surface.
+
+General operation: https://mjwhite8119.github.io/Robots/mpu6050
+
+### Kalman Filter
+The Kalman filter is responsible for estimating the necessary velocity estimates based on the position estimates and mathematical model. Immediately deriving the velocity from the position estimate would induces a high amount of noise in the velocity estimates. Integrating the acceleration values on the other hand would be another good approach, however these are quite difficult to access.
+
+### LQR Control
+
+## Git Commands
+git status
+git log --stat
+git add
+git commit -m "Message"
+git push
+git pull
 
