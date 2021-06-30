@@ -4,14 +4,17 @@ clear all;
 
 %% Initialize values
 % Onewheel
-M = 750*10^(-3); %[kg]
-L = 72*10^(-3); %[m]
-Iyy_g = 2049081*10^(-9); %[kg*m^2]
-Ixx_g = 810407*10^(-9); %[kg*m^2]
+M = 1000*10^(-3); %[kg]
+L = 76*10^(-3); %[m]
+Iyy_g = 2358443*10^(-9); %[kg*m^2] = Lzz in Solidworks
+Ixx_g = 1284903*10^(-9); %[kg*m^2] = Lxx in Solidworks
 
 m_w = 54*10^(-3); %[kg]
-R_w = 0.04; %[m] 
-I_w = (1/2)*m_w*(0.02^2+0.04^2); %[kg*m^2]
+R_w = 0.04; %[m]
+
+% In this case, I_w represents the moment of inertia of the flywheel
+m_bn = 15.9*10^(-3); %[kg]
+I_w = 12 * m_bn * (40*10^(-3))^2; %[kg*m^2]
 
 % Motor
 R = 38; %[Ohm]
@@ -100,10 +103,10 @@ r = mldivide(eye(4)-transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad)
 % out for one reason or another so check formulas...
 
 % Simulation time
-Tend = 3;
+Tend = 4;
 
 % Initial conditions
-x = [pi/100;0;0;0];
+x = [pi/90;0;0;0];
 t = 0:Ts:(Tend-Ts);
 
 % Simulation system
@@ -145,10 +148,10 @@ end
 % Show animation
 shg;
 for i=1:length(t_res)
-    plot([0,-L*sin(x_res(i,1))],[0,L*cos(x_res(i,1))],"ko-"); hold on;
-    plot([-L*sin(x_res(i,1)),-L*sin(x_res(i,1))-0.04*sin(x_res(i,3))],[L*cos(x_res(i,1)),L*cos(x_res(i,1))+0.04*cos(x_res(i,3))],"ko-"); % circle representing flywheel
+    plot([0,-(L+R_w)*sin(x_res(i,1))],[0,(L+R_w)*cos(x_res(i,1))],"ko-"); hold on; % [X coordinates], [Y coordinates]
+    plot([-(L+R_w)*sin(x_res(i,1)),-(L+R_w)*sin(x_res(i,1))-0.045*sin(x_res(i,3))],[(L+R_w)*cos(x_res(i,1)),(L+R_w)*cos(x_res(i,1))+0.045*cos(x_res(i,3))],"ko-"); % circle representing flywheel
     th = 0:pi/50:2*pi;
-    plot(0.04 * cos(th) - L*sin(x_res(i,1)), 0.04 * sin(th) + L*cos(x_res(i,1))); hold off;
+    plot(0.045 * cos(th) - (L+R_w)*sin(x_res(i,1)), 0.045 * sin(th) + (L+R_w)*cos(x_res(i,1))); hold off;
     axis([-0.15 0.15 -0.1 0.2]);
     pause(0.001);
 end
