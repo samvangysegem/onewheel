@@ -2,6 +2,19 @@
 clc;
 clear all;
 
+%% Matrix Debug Verify
+
+mat1 = [19,7,16,2;19,19,8,3;10,8,5,19;10,3,9,20];
+rowvec = [12,2,5,8];
+columnvec = [17;1;1;4];
+
+mat1*mat1;
+rowvec*mat1;
+mat1*columnvec;
+rowvec*columnvec;
+vecvec = columnvec*rowvec;
+mat1inv = inv(mat1);
+
 %% Initialize values
 % Samplefrequency
 Ts = 1/10;
@@ -62,23 +75,34 @@ ct_sys = ss(A,B,C,D);
 dt_sys = c2d(ct_sys,Ts);
 [Ad, Bd, Cd, Dd, Ts_d] = ssdata(dt_sys);
 % Desired state
-ksi = [1;0;0;0];
-% Cost for state and input
-Q = diag([20 5 1 1]);
-R = 0.30;
+ksi = [0;0;0;0];
+% Cost for state and input 
+Q = diag([10 2 2 1]);
+R = 0.3;
 % Constant disturbance
 G = (Ad - eye(4))*ksi; % Last vector is desired state
 % Ricatti for M
-[M,K,] = idare(Ad,Bd,Q,R,[],[]);
+[M,K,] = idare(Ad,Bd,Q,R,[],[], 'noscaling');
 % Disturbance vector
 r = mldivide(eye(4)-transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad), transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad)*M*G);
 
-%% Control implementation numerical values
-% u = -(R+transpose(Bd)*M*Bd)\transpose(Bd)*(M*Ad*(x-ksi)+M*G+r)
-%   = U*(x-ksi) + V*ksi + W*r
-U = -(R+transpose(Bd)*M*Bd)\transpose(Bd)*M*Ad;
-V = -(R+transpose(Bd)*M*Bd)\transpose(Bd)*M*(Ad - eye(4));
-W = -(R+transpose(Bd)*M*Bd)\transpose(Bd);
+%% 
+Mprev = 0;
+Mcurr = Q;
+
+Q = diag([10 3 2 1]);
+R = 0.5;
+
+i = 0;
+while ((i<100) & (max(abs(Mcurr-Mprev)) > 10^(-3)))
+    Mprev = Mcurr;
+    Mcurr = Q + transpose(Ad)*Mprev*Ad - transpose(Ad)*Mprev*Bd*inv(transpose(Bd)*Mprev*Bd+R)*transpose(Bd)*Mprev*Ad;
+    i = i+1;
+end
+x = [0.2;-0.1;-pi/72;0];
+ksi = [0;0;0;0];
+
+u = -(R+transpose(Bd)*Mcurr*Bd)\transpose(Bd)*(Mcurr*Ad*(x-ksi)+Mcurr*G+r);
 
 %% System simulation
 % Simulation time
@@ -172,7 +196,7 @@ for i=1:length(t_res)
     plot(0.04 * cos(th) + x_res(i,1), 0.04 * sin(th) + R_w,"k-");
     yline(0); hold off;
     % Set axis parameters
-    xlim([-0.15 1.15]);
+    xlim([-0.5 1.15]);
     ylim([-0.1 0.3]);
     pbaspect([3.25 1 1]);
     % axis equal;

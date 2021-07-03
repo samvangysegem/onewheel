@@ -26,8 +26,10 @@
 // #include "MPU6050.h"
 #include <MPU6050_6Axis_MotionApps20.h>
 
+
 // Custom libraries
 #include "Kalman.h"
+#include "LQR.h"
 
 #define LED_PIN 13
 
@@ -103,7 +105,7 @@ void MPU6050Connect() {
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
 
-    char * StatStr[5] { "No Error", "Initial memory load failed", "DMP configuration updates failed", "3", "4"};
+    const char* StatStr[5] { "No Error", "Initial memory load failed", "DMP configuration updates failed", "3", "4"};
 
     MPUInitCntr++;
 
@@ -145,7 +147,7 @@ void GetDMP() {
   // Best version I have made so far
   // Serial.println(F("FIFO interrupt at:"));
   // Serial.println(micros());
-  static unsigned long LastGoodPacketTime;
+  // static unsigned long LastGoodPacketTime;
   // mpuInterrupt = false;
   FifoAlive = 1;
   fifoCount = mpu.getFIFOCount();
@@ -157,7 +159,7 @@ void GetDMP() {
       mpu.getFIFOBytes(fifoBuffer, packetSize); // lets do the magic and get the data
       fifoCount -= packetSize;
     }
-    LastGoodPacketTime = millis();
+    // LastGoodPacketTime = millis();
     MPUMath(); // <<<<<<<<<<<<<<<<<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<<<<<
     digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Blink the Light
   }
@@ -167,6 +169,8 @@ void GetDMP() {
 // ===                    MPU Polling Data                      ===
 // ================================================================
 // Alternative to GetDMP without use of interrupts
+
+float Yaw, Pitch, Roll;
 
 void pollDMP() {
   // Clear MPU value in order to get latest value
@@ -181,12 +185,17 @@ void pollDMP() {
   MPUMath();
   // Blink LED
   digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  // DEBUG Purposes
+  DPRINTSFN(15, " Yaw:", Yaw, -6, 2);
+  DPRINTSFN(15, " Pitch:", Pitch, -6, 2);
+  DPRINTSFN(15, " Roll:", Roll, -6, 2);
+  DPRINTLN();
 }
 
 // ================================================================
 // ===                        MPU Math                          ===
 // ================================================================
-float Yaw, Pitch, Roll;
+
 void MPUMath() {
   mpu.dmpGetQuaternion(&q, fifoBuffer);
   mpu.dmpGetGravity(&gravity, &q);
@@ -195,22 +204,23 @@ void MPUMath() {
   Yaw = (ypr[0] * 180.0 / M_PI);
   Pitch = (ypr[1] * 180.0 / M_PI);
   Roll = (ypr[2] * 180.0 / M_PI);
- 
-  /*DPRINTSTIMER(200) {
-    DPRINTSFN(15, " W:", q.w, -6, 4);
-    DPRINTSFN(15, " X:", q.x, -6, 4);
-    DPRINTSFN(15, " Y:", q.y, -6, 4);
-    DPRINTSFN(15, " Z:", q.z, -6, 4);
-
-    DPRINTSFN(15, " Yaw:", Yaw, -6, 2);
-    DPRINTSFN(15, " Pitch:", Pitch, -6, 2);
-    DPRINTSFN(15, " Roll:", Roll, -6, 2);
-    DPRINTSFN(15, " Yaw:", ypr[0], -6, 2);
-    DPRINTSFN(15, " Pitch:", ypr[1], -6, 2);
-    DPRINTSFN(15, " Roll:", ypr[2], -6, 2);
-    DPRINTLN();
-  }*/
 }
+
+// ================================================================
+// ===                       Model Setup                        ===
+// ================================================================
+const float A[4][4] PROGMEM = {{1,0.09393943,-0.11034489,-0.00341160},
+                               {0,0.86322326,-2.63312777,-0.11034489},
+                               {0,0.06076874,2.59774256,0.14927222},
+                               {0,1.45010660,38.28278264,2.59774256}};
+const float B[4] PROGMEM = {0.00153432,0.03462702,-0.01538449,-0.36711559};
+const float Q[4] PROGMEM = {10,2,2,1};
+const float R PROGMEM = 0.3;
+
+float state[4] = {0.2,-0.1,-PI/72,0};
+float ksi[4] = {0,0,0,0};
+
+LQR forwardLQR(A, B, Q, R);
 
 // ================================================================
 // ===                         Setup                            ===
@@ -219,30 +229,71 @@ void setup() {
   Serial.begin(115200);
   // Wait for Serial Monitor to be ready
   while (!Serial); 
-  Serial.println("i2cSetup");
+  Serial.println(F("i2cSetup"));
   i2cSetup();
-  Serial.println("MPU6050Connect");
+  Serial.println(F("MPU6050Connect"));
   MPU6050Connect();
-  Serial.println("Interrupt Timers Setup");
+  Serial.println(F("Interrupt Timers Setup"));
   timersSetup();
-  Serial.println("Setup complete");
+  Serial.println(F("Setup complete"));
+  Serial.println(F("Debug section"));
+  debugMatVec();
+  Serial.println(F("Debug complete"));
   pinMode(LED_PIN, OUTPUT);
+
+  unsigned long time1 = micros();
+  float input = forwardLQR.getControl(state, ksi);
+  unsigned long time2 = micros();
+  Serial.println(input, 4);
+  Serial.println(time2-time1);
 }
 
 // ================================================================
 // ===                          Loop                            ===
 // ================================================================
 void loop() {
-  
   if (controlInterrupt) {
     // Turn update flag off
     controlInterrupt = false;
     // Get updated position data
     pollDMP();
-    
-    DPRINTSFN(15, " Yaw:", Yaw, -6, 2);
-    DPRINTSFN(15, " Pitch:", Pitch, -6, 2);
-    DPRINTSFN(15, " Roll:", Roll, -6, 2);
-    DPRINTLN();
+  }
+}
+
+// ================================================================
+// ===                Debug Matrix/Vector Class                 ===
+// ================================================================
+void debugMatVec() {
+  // Initialize
+  float matArr[4][4] {{19,7,16,2},{19,19,8,3},{10,8,5,19},{10,3,9,20}};
+  float rowArr[4] {12,2,5,8};
+  float colArr[4] {17,1,1,4};
+  Matrix4 mat(matArr);
+  RowVector4 rowvec(rowArr);
+  ColumnVector4 colvec(colArr);
+  
+  // Multiplication
+  float mat2Arr[4][4] {{674,400,458,403},{832,567,523,307},{582,319,420,519},{537,259,409,600}};
+  float rowmat[4] {396,186,305,285};
+  float matcol[4] {354,362,259,262};
+  float vecvec[4][4] {{204,34,85,136},{12,2,5,8},{12,2,5,8},{48,8,20,32}};
+
+  Serial.print("Mat * Mat: ");
+  Serial.println((mat * mat) == Matrix4(mat2Arr));
+  Serial.print("Vec * Mat: ");
+  Serial.println((rowvec * mat) == RowVector4(rowmat));
+  Serial.print("Mat * Vec: ");
+  Serial.println((mat * colvec) == ColumnVector4(matcol));
+  Serial.print("Vec[row] * Vec[col]: ");
+  Serial.println((rowvec * colvec) == 243);
+  Serial.print("Vec[col] * Vec[row]: ");
+  Serial.println((colvec * rowvec) == Matrix4(vecvec));
+  Serial.print("Vec Transpose: ");
+  Serial.println(rowvec.T() == ColumnVector4(rowArr));
+  Serial.println("Matrix Inverse");
+  for (int i=0; i<4; i++){
+    for (int j=0; j<4; j++){
+      Serial.println(mat.Inv().getElement(i, j), 5);
+    }
   }
 }

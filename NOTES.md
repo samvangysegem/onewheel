@@ -4,7 +4,7 @@
 3D printed wheel lacks the weight to fulfill the role of a flywheel. Therefore, a number of bolts are added at a large outside diameter to increase the total moment of inertia.
 
 Source: https://itafasteners.com/weight-chart.php
-According to the site mentioned above, the total weight of 100 M8 bolts is approximately 1.11kg, resulting in a weight of 11.1g x 12 at a radius of 40mm (without nuts).
+According to the site mentioned above, the total weight of 100 M8 bolts is approximately 1.593kg, resulting in a weight of 15.9g x 12 at a radius of 40mm (with nuts).
 
 Outside diameter: 95mm
 Inside diameter: 7mm
@@ -42,10 +42,17 @@ Calibration is required to guarantee correct operating behaviour. This can be ac
 
 General operation: https://mjwhite8119.github.io/Robots/mpu6050
 
+### Motor Encoders
+
 ### Kalman Filter
 The Kalman filter is responsible for estimating the necessary velocity estimates based on the position estimates and mathematical model. Immediately deriving the velocity from the position estimate would induces a high amount of noise in the velocity estimates. Integrating the acceleration values on the other hand would be another good approach, however these are quite difficult to access.
 
 ### LQR Control
+
+### Matrix4 and Vector4
+Custom classes written to perform matrix calculations for Kalman filter and LQR control. Row and column vectors are separated in order to easily implement the multiplication overloading of these different vectors with each other and matrices.
+- [ ] Inverse operator for Matrix class (efficient implementation)
+- [ ] Copy constructors
 
 ## Git Commands
 git status
@@ -54,4 +61,4 @@ git add
 git commit -m "Message"
 git push
 git pull
-
+git rm --cached *filename*

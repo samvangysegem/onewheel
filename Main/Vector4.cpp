@@ -13,6 +13,10 @@ RowVector4::RowVector4(float arr[4]){
     }
 }
 
+const ColumnVector4 RowVector4::T() {
+    return ColumnVector4(Vector);
+}
+
 const RowVector4 RowVector4::operator +(const RowVector4& secondOperand) const {
     // Arr for initialisation of new vector
     float resArr[4];
@@ -35,6 +39,22 @@ const RowVector4 RowVector4::operator -(const RowVector4& secondOperand) const {
     return RowVector4(resArr);
 }
 
+bool RowVector4::operator ==(const RowVector4& secondOperand) const {
+    for (int i=0; i<4; i++){
+        if (Vector[i] != secondOperand.Vector[i]){
+            return false;
+        }
+    }
+    return true;
+}
+
+RowVector4& RowVector4::operator =(const RowVector4& secondOperand) {
+    for (int i=0; i<4; i++){
+        Vector[i] = secondOperand.Vector[i];
+    }
+    return *this;
+}
+
 ColumnVector4::ColumnVector4(){
     for (int i=0; i<4; i++){
         Vector[i] = 0;
@@ -45,6 +65,10 @@ ColumnVector4::ColumnVector4(float arr[4]){
     for (int i=0; i<4; i++){
         Vector[i] = arr[i];
     }
+}
+
+const RowVector4 ColumnVector4::T() {
+    return RowVector4(Vector);
 }
 
 const ColumnVector4 ColumnVector4::operator +(const ColumnVector4& secondOperand) const {
@@ -67,6 +91,22 @@ const ColumnVector4 ColumnVector4::operator -(const ColumnVector4& secondOperand
     }
     // Return new vector
     return ColumnVector4(resArr);
+}
+
+bool ColumnVector4::operator ==(const ColumnVector4& secondOperand) const {
+    for (int i=0; i<4; i++){
+        if (Vector[i] != secondOperand.Vector[i]){
+            return false;
+        }
+    }
+    return true;
+}
+
+ColumnVector4& ColumnVector4::operator =(const ColumnVector4& secondOperand) {
+    for (int i=0; i<4; i++){
+        Vector[i] = secondOperand.Vector[i];
+    }
+    return *this;
 }
 
 // MULTIPLICATION OVERLOADING

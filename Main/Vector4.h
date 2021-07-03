@@ -3,6 +3,8 @@
 
 #include "Matrix4.h"
 
+class ColumnVector4;
+
 class RowVector4 {
 
     public:
@@ -12,11 +14,15 @@ class RowVector4 {
   
     public:
         // Get method for matrix
+        const ColumnVector4 T();
         float getElement(int index) const { return Vector[index]; };
+        void setElement(int index, float val) { Vector[index] = val; };
 
         // Operator Overloading
         const RowVector4 operator +(const RowVector4& secondOperand) const;
         const RowVector4 operator -(const RowVector4& secondOperand) const;
+        bool operator ==(const RowVector4& secondOperand) const;
+        RowVector4& operator =(const RowVector4& secondOperand);
 
     private:
         // The actual Matrix: [rows][columns]
@@ -32,11 +38,15 @@ class ColumnVector4 {
   
     public:
         // Get method for matrix
+        const RowVector4 T();
         float getElement(int index) const { return Vector[index]; };
+        void setElement(int index, float val) { Vector[index] = val; };
 
         // Operator Overloading
         const ColumnVector4 operator +(const ColumnVector4& secondOperand) const;
         const ColumnVector4 operator -(const ColumnVector4& secondOperand) const;
+        bool operator ==(const ColumnVector4& secondOperand) const;
+        ColumnVector4& operator =(const ColumnVector4& secondOperand);
 
     private:
         // The actual Matrix: [rows][columns]

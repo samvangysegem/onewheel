@@ -7,19 +7,24 @@ class Matrix4 {
     public:
         // Constructor with and without initialisation array
         Matrix4();
+        Matrix4(float arr[4]);
         Matrix4(float arr[4][4]);
   
     public:
         // Get method for matrix
         float getElement(int rowindex, int columnindex) const { return Matrix[rowindex][columnindex]; };
+        void setElement(int rowindex, int columnindex, float val) { Matrix[rowindex][columnindex] = val; };
 
         // Transpose
-        Matrix4 transpose();
+        Matrix4 T();
+        Matrix4 Inv();
 
         // Operator Overloading
         const Matrix4 operator +(const Matrix4& secondOperand) const;
         const Matrix4 operator -(const Matrix4& secondOperand) const;
         const Matrix4 operator *(const Matrix4& secondOperand) const;
+        bool operator ==(const Matrix4& secondOperand) const;
+        Matrix4& operator =(const Matrix4& secondOperand);
 
     private:
         // The actual Matrix: [rows][columns]
