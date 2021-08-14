@@ -75,7 +75,7 @@ ct_sys = ss(A,B,C,D);
 dt_sys = c2d(ct_sys,Ts);
 [Ad, Bd, Cd, Dd, Ts_d] = ssdata(dt_sys);
 % Desired state
-ksi = [0;0;0;0];
+ksi = [1;0;0;0];
 % Cost for state and input 
 Q = diag([10 2 2 1]);
 R = 0.3;
@@ -172,6 +172,7 @@ end
 myVideo = VideoWriter('OneDuine_Mk1','MPEG-4'); %open video file
 myVideo.FrameRate = 100;  %can adjust this, 5 - 10 works well for me
 open(myVideo)
+filename_gif = 'ForwardControl.gif';
 set(gcf, 'Position',  [100, 100, 1500, 1000]);
 for i=1:length(t_res)
     % First subplot => input
@@ -185,7 +186,7 @@ for i=1:length(t_res)
     ylim([-15 15]);
     pbaspect([3.25 1 1]);
     % Additional information
-    title('Input magnitude');
+    title('MOTOR INPUT VOLTAGE');
     xlabel('Time [s]');
     ylabel('Voltage [V]'); 
     % Second subplot => animation
@@ -196,13 +197,21 @@ for i=1:length(t_res)
     plot(0.04 * cos(th) + x_res(i,1), 0.04 * sin(th) + R_w,"k-");
     yline(0); hold off;
     % Set axis parameters
-    xlim([-0.5 1.15]);
-    ylim([-0.1 0.3]);
+    xlim([-0.3 1.15]);
+    ylim([-0.15 0.3]);
     pbaspect([3.25 1 1]);
     % axis equal;
     pause(0.01);
     frame = getframe(1);
     writeVideo(myVideo,frame);
+    % GIF
+    im = frame2im(frame);
+    [imind, cm] = rgb2ind(im,256); 
+    if i == 1
+        imwrite(imind, cm, filename_gif, 'gif', 'DelayTime', 0.04, 'Loopcount', inf);
+    elseif mod(i,4) == 1
+        imwrite(imind, cm, filename_gif, 'gif', 'DelayTime', 0.04, 'WriteMode', 'append');    
+    end
 end
 
 close(myVideo)
