@@ -9,11 +9,11 @@ class LQR {
 
     public:
         LQR();
-        LQR(const float _Ad[4][4], const float _Bd[4], const float _Q[4], const float _R);
+        LQR(const float (&_Ad)[4][4], const float (&_Bd)[4], const float (&_Q)[4], const float &_R);
     
     public:
         // Set/Get methods
-        float getControl(float state[4], float ksi[4]);
+        float getControl(const float (&state)[4], const float (&ksi)[4]); // Don't change original arrays here
 
     private:
         // Model and control variables

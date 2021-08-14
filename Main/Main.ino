@@ -10,10 +10,12 @@
 #define DPRINTSTIMER(t)    for (static unsigned long SpamTimer; (unsigned long)(millis() - SpamTimer) >= (t); SpamTimer = millis())
 #define DPRINTSFN(StrSize,Name,...) {char S[StrSize];Serial.print("\t");Serial.print(Name);Serial.print(" "); Serial.print(dtostrf((float)__VA_ARGS__ ,S));} //StringSize,Name,Variable,Spaces,Percision
 #define DPRINTLN(...)      Serial.println(__VA_ARGS__)
+#define DEBUGMODE          true
 #else
 #define DPRINTSTIMER(t)    if(false)
 #define DPRINTSFN(...)     //blank line
 #define DPRINTLN(...)      //blank line
+#define DEBUGMODE          false
 #endif
 
 // ================================================================
@@ -209,18 +211,19 @@ void MPUMath() {
 // ================================================================
 // ===                       Model Setup                        ===
 // ================================================================
-const float A[4][4] PROGMEM = {{1,0.09393943,-0.11034489,-0.00341160},
+const float A[4][4] = {{1,0.09393943,-0.11034489,-0.00341160},
                                {0,0.86322326,-2.63312777,-0.11034489},
                                {0,0.06076874,2.59774256,0.14927222},
                                {0,1.45010660,38.28278264,2.59774256}};
-const float B[4] PROGMEM = {0.00153432,0.03462702,-0.01538449,-0.36711559};
-const float Q[4] PROGMEM = {10,2,2,1};
-const float R PROGMEM = 0.3;
-
-float state[4] = {0.2,-0.1,-PI/72,0};
-float ksi[4] = {0,0,0,0};
+const float B[4] = {0.00153432,0.03462702,-0.01538449,-0.36711559};
+const float Q[4] = {10,2,2,1};
+const float R  = 0.3;
 
 LQR forwardLQR(A, B, Q, R);
+
+// Temporary
+float state[4] = {0.2,-0.1,-PI/72,0};
+float ksi[4] = {0,0,0,0};
 
 // ================================================================
 // ===                         Setup                            ===
@@ -229,23 +232,31 @@ void setup() {
   Serial.begin(115200);
   // Wait for Serial Monitor to be ready
   while (!Serial); 
-  Serial.println(F("i2cSetup"));
+  Serial.println(F("Setting up I2C..."));
   i2cSetup();
-  Serial.println(F("MPU6050Connect"));
+  Serial.println(F("Initialising MPU6050..."));
   MPU6050Connect();
-  Serial.println(F("Interrupt Timers Setup"));
+  Serial.println(F("Setting up interrupt timers..."));
   timersSetup();
-  Serial.println(F("Setup complete"));
-  Serial.println(F("Debug section"));
-  debugMatVec();
-  Serial.println(F("Debug complete"));
+
   pinMode(LED_PIN, OUTPUT);
 
-  unsigned long time1 = micros();
-  float input = forwardLQR.getControl(state, ksi);
-  unsigned long time2 = micros();
-  Serial.println(input, 4);
-  Serial.println(time2-time1);
+  if (DEBUGMODE) {
+    // Debug Matrix and Vector classes
+    Serial.println(F("Debug section"));
+    debugMatVec();
+
+    // Debug LQR control
+    
+    unsigned long time1 = micros();
+    float input = forwardLQR.getControl(state, ksi);
+    unsigned long time2 = micros();
+    Serial.println(F("LQR Control [V]"));
+    Serial.println(input, 4);
+    Serial.println(F("LQR Control Calculation Time [us]"));
+    Serial.println(time2-time1);
+    Serial.println(F("Debug complete"));
+  }
 }
 
 // ================================================================

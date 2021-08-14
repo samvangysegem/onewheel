@@ -7,9 +7,15 @@ RowVector4::RowVector4(){
     }
 }
 
-RowVector4::RowVector4(float arr[4]){
+RowVector4::RowVector4(const float (&arr)[4]){
     for (int i=0; i<4; i++){
         Vector[i] = arr[i];
+    }
+}
+
+RowVector4::RowVector4(const RowVector4& row2){
+    for (int i=0; i<4; i++){
+        Vector[i] = row2.getElement(i);
     }
 }
 
@@ -61,9 +67,15 @@ ColumnVector4::ColumnVector4(){
     }
 }
 
-ColumnVector4::ColumnVector4(float arr[4]){
+ColumnVector4::ColumnVector4(const float (&arr)[4]){
     for (int i=0; i<4; i++){
         Vector[i] = arr[i];
+    }
+}
+
+ColumnVector4::ColumnVector4(const ColumnVector4& col2){
+    for (int i=0; i<4; i++){
+        Vector[i] = col2.getElement(i);
     }
 }
 

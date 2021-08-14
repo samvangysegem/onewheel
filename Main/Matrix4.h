@@ -7,8 +7,9 @@ class Matrix4 {
     public:
         // Constructor with and without initialisation array
         Matrix4();
-        Matrix4(float arr[4]);
-        Matrix4(float arr[4][4]);
+        Matrix4(const float (&arr)[4]);
+        Matrix4(const float (&arr)[4][4]);
+        Matrix4(const Matrix4&);
   
     public:
         // Get method for matrix

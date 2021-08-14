@@ -10,7 +10,8 @@ class RowVector4 {
     public:
         // Constructor with and without initialisation array
         RowVector4();
-        RowVector4(float arr[4]);
+        RowVector4(const float (&arr)[4]);
+        RowVector4(const RowVector4&);
   
     public:
         // Get method for matrix
@@ -34,7 +35,8 @@ class ColumnVector4 {
     public:
         // Constructor with and without initialisation array
         ColumnVector4();
-        ColumnVector4(float arr[4]);
+        ColumnVector4(const float (&arr)[4]);
+        ColumnVector4(const ColumnVector4&);
   
     public:
         // Get method for matrix

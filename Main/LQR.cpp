@@ -4,19 +4,15 @@ LQR::LQR(){
     // Matrices are automatically initialised with values of zero
 }
 
-LQR::LQR(const float _Ad[4][4], const float _Bd[4], const float _Q[4], const float _R) {
+LQR::LQR(const float (&_Ad)[4][4], const float (&_Bd)[4], const float (&_Q)[4], const float &_R) {
     // Model matrices
-    for (int i=0; i<4; i++){
-        Bd.setElement(i, _Bd[i]);
-        Q.setElement(i, i, _Q[i]);
-        for (int j=0; j<4; j++){
-            Ad.setElement(i, j, _Ad[i][j]);
-        }
-    }
+    Ad = Matrix4(_Ad);
+    Bd = ColumnVector4(_Bd);
+    Q = Matrix4(_Q);
     R = _R;
 }
 
-float LQR::getControl(float state[4], float ksi[4]) {
+float LQR::getControl(const float (&state)[4], const float (&ksi)[4]) {
     // Create vectors
     ColumnVector4 X(state);
     ColumnVector4 KSI(ksi);
@@ -34,7 +30,7 @@ float LQR::getControl(float state[4], float ksi[4]) {
     Matrix4 I(eye);
     ColumnVector4 G = (Ad - I)*KSI; // Constant disturbance
     Matrix4 temp = Ad-(Bd*(1/(R+Bd.T()*M*Bd)))*Bd.T()*M*Ad; // Common expression
-    ColumnVector4 r = (I-temp.T()).Inv() * temp.T()*M*G; // Actual disturbance vector
+    ColumnVector4 r = (I-temp.T()).Inv()*temp.T()*M*G; // Actual disturbance vector
     
     // Motor input voltage
     float u = ((-1)/(R+Bd.T()*M*Bd))*Bd.T()*(M*Ad*(X-KSI)+M*G+r);

@@ -1,3 +1,7 @@
+## General structure
+
+https://docs.wpilib.org/en/stable/docs/software/commandbased/what-is-command-based.html
+
 ## Mechanical Design
 
 ### Flywheel Design
