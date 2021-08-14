@@ -21,5 +21,5 @@ The goal of this project is to build a one-wheeled robot from scratch. This incl
 
 ### :computer: Simulation results
 
-![Forward LQR Control](https://github.com/samvangysegem/onewheel/blob/main/Matlab/OneDuino_Mk1.gif)
+![Forward LQR Control](https://github.com/samvangysegem/onewheel/blob/main/Matlab/ForwardControl.gif)
  
