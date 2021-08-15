@@ -172,9 +172,10 @@ end
 myVideo = VideoWriter('OneDuine_Mk1','MPEG-4'); %open video file
 myVideo.FrameRate = 100;  %can adjust this, 5 - 10 works well for me
 open(myVideo)
-filename_ctrl_gif = 'ForwardControl_Control.gif';
+%filename_ctrl_gif = 'ForwardControl_Control.gif';
 filename_anim_gif = 'ForwardControl_Animation.gif';
-set(gcf, 'Position',  [100, 100, 1500, 1000]);
+set(gcf, 'Position',  [100, 100, 1450, 1000]);
+set(gcf, 'color', 'w');
 for i=1:length(t_res)
     % First subplot => input
     figone = subplot(2,1,1);
@@ -204,7 +205,7 @@ for i=1:length(t_res)
     % axis equal;
     pause(0.01);
     frame_ctrl = getframe(figone);
-    frame_anim = getframe(figtwo);
+    frame_anim = getframe(gcf);
     %writeVideo(myVideo,frame);
     % GIF
     im_ctrl = frame2im(frame_ctrl);
@@ -212,10 +213,10 @@ for i=1:length(t_res)
     im_anim = frame2im(frame_anim);
     [imind_anim, cm_anim] = rgb2ind(im_anim,256);
     if i == 1
-        imwrite(imind_ctrl, cm_ctrl, filename_ctrl_gif, 'gif', 'DelayTime', 0.04, 'Loopcount', inf);
+        %imwrite(imind_ctrl, cm_ctrl, filename_ctrl_gif, 'gif', 'DelayTime', 0.04, 'Loopcount', inf);
         imwrite(imind_anim, cm_anim, filename_anim_gif, 'gif', 'DelayTime', 0.04, 'Loopcount', inf);
     elseif mod(i,4) == 1
-        imwrite(imind_ctrl, cm_ctrl, filename_ctrl_gif, 'gif', 'DelayTime', 0.04, 'WriteMode', 'append'); 
+        %imwrite(imind_ctrl, cm_ctrl, filename_ctrl_gif, 'gif', 'DelayTime', 0.04, 'WriteMode', 'append'); 
         imwrite(imind_anim, cm_anim, filename_anim_gif, 'gif', 'DelayTime', 0.04, 'WriteMode', 'append');    
     end
 end
