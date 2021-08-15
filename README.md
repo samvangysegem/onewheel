@@ -20,8 +20,7 @@ The goal of this project is to build a one-wheeled robot from scratch. This incl
 - [ ] Countless hours of debugging untill this thing will work
 
 ### :computer: Simulation results
-
+Simulation of the LQR control responsible for balance in the forward direction: with initial conditions different from balance, its target state is at x = 1 in a balanced state.
 
 ![Forward LQR Control](https://github.com/samvangysegem/onewheel/blob/main/Matlab/ForwardControl_Animation.gif)
-![Forward LQR Control](https://github.com/samvangysegem/onewheel/blob/main/Matlab/ForwardControl_Control.gif)
  
