@@ -172,11 +172,12 @@ end
 myVideo = VideoWriter('OneDuine_Mk1','MPEG-4'); %open video file
 myVideo.FrameRate = 100;  %can adjust this, 5 - 10 works well for me
 open(myVideo)
-filename_gif = 'ForwardControl.gif';
+filename_ctrl_gif = 'ForwardControl_Control.gif';
+filename_anim_gif = 'ForwardControl_Animation.gif';
 set(gcf, 'Position',  [100, 100, 1500, 1000]);
 for i=1:length(t_res)
     % First subplot => input
-    subplot(2,1,1);
+    figone = subplot(2,1,1);
     % Plot corresponding input
     plot(t_res(1:i), u_res(1:i),'-r','Linewidth',2); hold on;
     yline(12);
@@ -190,7 +191,7 @@ for i=1:length(t_res)
     xlabel('Time [s]');
     ylabel('Voltage [V]'); 
     % Second subplot => animation
-    subplot(2,1,2); cla;
+    figtwo = subplot(2,1,2); cla;
     plot([x_res(i,1),x_res(i,1)+L*sin(x_res(i,3))],[R_w,R_w+L*cos(x_res(i,3))],"ko-"); hold on;
     plot([x_res(i,1),x_res(i,1)+R_w*sin(x_res(i,1)/R_w)],[R_w,R_w+R_w*cos(x_res(i,1)/R_w)],"k-");
     th = 0:pi/20:2*pi;
@@ -202,15 +203,20 @@ for i=1:length(t_res)
     pbaspect([3.25 1 1]);
     % axis equal;
     pause(0.01);
-    frame = getframe(1);
-    writeVideo(myVideo,frame);
+    frame_ctrl = getframe(figone);
+    frame_anim = getframe(figtwo);
+    %writeVideo(myVideo,frame);
     % GIF
-    im = frame2im(frame);
-    [imind, cm] = rgb2ind(im,256); 
+    im_ctrl = frame2im(frame_ctrl);
+    [imind_ctrl, cm_ctrl] = rgb2ind(im_ctrl,256); 
+    im_anim = frame2im(frame_anim);
+    [imind_anim, cm_anim] = rgb2ind(im_anim,256);
     if i == 1
-        imwrite(imind, cm, filename_gif, 'gif', 'DelayTime', 0.04, 'Loopcount', inf);
+        imwrite(imind_ctrl, cm_ctrl, filename_ctrl_gif, 'gif', 'DelayTime', 0.04, 'Loopcount', inf);
+        imwrite(imind_anim, cm_anim, filename_anim_gif, 'gif', 'DelayTime', 0.04, 'Loopcount', inf);
     elseif mod(i,4) == 1
-        imwrite(imind, cm, filename_gif, 'gif', 'DelayTime', 0.04, 'WriteMode', 'append');    
+        imwrite(imind_ctrl, cm_ctrl, filename_ctrl_gif, 'gif', 'DelayTime', 0.04, 'WriteMode', 'append'); 
+        imwrite(imind_anim, cm_anim, filename_anim_gif, 'gif', 'DelayTime', 0.04, 'WriteMode', 'append');    
     end
 end
 
