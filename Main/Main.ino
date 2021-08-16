@@ -27,13 +27,15 @@
 #include <I2Cdev.h>
 // #include "MPU6050.h"
 #include <MPU6050_6Axis_MotionApps20.h>
-
+#include <Encoder.h>
 
 // Custom libraries
 #include "Kalman.h"
 #include "LQR.h"
 
 #define LED_PIN 13
+
+// Motor ports: 7,8 and 3, 4
 
 // ================================================================
 // ===                      I2C SETUP Items                     ===
@@ -209,7 +211,34 @@ void MPUMath() {
 }
 
 // ================================================================
-// ===                       Model Setup                        ===
+// ===                       Encoder SETUP                      ===
+// ================================================================
+
+// Encoder for wheel rotation
+Encoder wheelEnc(21, 22);
+float wheelEncPos;
+
+// Encoder for flywheel rotation
+Encoder flyEnc(16, 17);
+float flyEncPos;
+
+void encoderSetup() {
+  wheelEnc.write(0);
+  flyEnc.write(0);
+}
+
+void pollEncoders() {
+  // Get position information
+  wheelEncPos = wheelEnc.read() / (18.75 * 64.0) * 360.0;
+  flyEncPos = flyEnc.read() / (18.75 * 64.0) * 360.0;
+  // DEBUG
+  DPRINTSFN(10, " Wheel Encoder:", wheelEncPos, -6, 2);
+  DPRINTSFN(10, " Fly Encoder:", flyEncPos, -6, 2);
+  DPRINTLN();
+}
+
+// ================================================================
+// ===                       Model SETUP                        ===
 // ================================================================
 const float A[4][4] = {{1,0.09393943,-0.11034489,-0.00341160},
                                {0,0.86322326,-2.63312777,-0.11034489},
@@ -226,7 +255,7 @@ float state[4] = {0.2,-0.1,-PI/72,0};
 float ksi[4] = {0,0,0,0};
 
 // ================================================================
-// ===                         Setup                            ===
+// ===                         SETUP                            ===
 // ================================================================
 void setup() {
   Serial.begin(115200);
@@ -238,7 +267,9 @@ void setup() {
   MPU6050Connect();
   Serial.println(F("Setting up interrupt timers..."));
   timersSetup();
-
+  Serial.println(F("Setting up motor encoders..."));
+  encoderSetup();
+  
   pinMode(LED_PIN, OUTPUT);
 
   if (DEBUGMODE) {
@@ -268,6 +299,8 @@ void loop() {
     controlInterrupt = false;
     // Get updated position data
     pollDMP();
+    // Get encoder position data
+    pollEncoders();
   }
 }
 
