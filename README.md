@@ -27,6 +27,5 @@ Simulation of the LQR control responsible for balance in the forward direction: 
 ### :battery: Circuit Design
 The circuit is built on a prototyping PCB given the low complexity of the circuit, which wasn't worth the long waiting time of ordering PCBs online. The board features female headers for connecting the Teensy 4.0, 2 male header rows for driving the motors and interfacing with their respective encoders and an MPU6050 module. The red-black wires connect to the Cytron MDD3A dual channel DC motor driver board, in addition to a number of male-female headers for control. As the main focus of this project isn't brushed DC motor control, I didn't bother designing the H-bridges and corresponding driving circuits myself (an idea for an upcoming project, albeit a bit more challenging by replacing the brushed DC motors with brushless DC motors).
 
-![PCB Front](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Front.JPG)
-![PCB Back](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Back.JPG)
+![](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Front.JPG) | ![](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Back.JPG)
 
