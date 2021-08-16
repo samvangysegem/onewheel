@@ -1,8 +1,0 @@
-Partlist exported from /Users/samvangysegem/Documents/EAGLE/projects/OneWheel/OneWheelPCB.sch at 14/07/2019 10:14
-
-Qty Value Device   Package  Parts                  Description      MF MPN     OC_FARNELL OC_NEWARK
-1         FE06-1   FE06     MC                     FEMALE HEADER               unknown    unknown  
-2         MA06-1   MA06-1   SV3, SV4               PIN HEADER                  unknown    unknown  
-1         MA08-1   MA08-1   MPU-6050               PIN HEADER                  unknown    unknown  
-3         W237-102 W237-102 MOTOR1, MOTOR2, SUPPLY WAGO SCREW CLAMP    237-102 unknown    70K9898  
-1   NANO  NANO     NANO     U$1                    Arduino Nano                                    

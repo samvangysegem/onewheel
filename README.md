@@ -14,7 +14,7 @@ The goal of this project is to build a one-wheeled robot from scratch. This incl
 - [x] 3D design of robot in Solidworks
 - [x] Component selection
 - [x] LQR control system design
-- [ ] Circuit design
+- [x] Circuit design
 - [ ] Coding
 - [ ] 3D printing parts and assembly
 - [ ] Countless hours of debugging untill this thing will work
@@ -24,3 +24,4 @@ Simulation of the LQR control responsible for balance in the forward direction: 
 
 ![Forward LQR Control](https://github.com/samvangysegem/onewheel/blob/main/Matlab/ForwardControl_Animation.gif)
  
+### :computer: Circuit Design
