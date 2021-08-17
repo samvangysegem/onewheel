@@ -259,7 +259,6 @@ void motorSetup() {
   // Check if pins still correct, otherwise setup will fail
   assert((M1A == 8) && (M1B == 7));
   assert((M2A == 3) && (M2B == 2));
-  
   // Setup pins as output pins
   pinMode(M1A, OUTPUT);
   pinMode(M1B, OUTPUT);
