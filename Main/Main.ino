@@ -5,6 +5,7 @@
 // https://forum.arduino.cc/index.php?topic=408980.0 Post nr 4
 
 #define DEBUG
+#define __ASSERT_USE_STDERR //NDEBUG in the case of leaving out asserts
 
 #ifdef DEBUG
 #define DPRINTSTIMER(t)    for (static unsigned long SpamTimer; (unsigned long)(millis() - SpamTimer) >= (t); SpamTimer = millis())
@@ -18,11 +19,14 @@
 #define DEBUGMODE          false
 #endif
 
+#define sgn(x) ((x) < 0 ? -1 : 1)
+
 // ================================================================
 // ===                        LIBRARIES                         ===
 // ================================================================
 
 // Installed libraries
+#include <assert.h>
 #include <Wire.h>
 #include <I2Cdev.h>
 // #include "MPU6050.h"
@@ -35,7 +39,11 @@
 
 #define LED_PIN 13
 
-// Motor ports: 7,8 and 3, 4
+#define M1A 8 
+#define M1B 7
+
+#define M2A 3
+#define M2B 2
 
 // ================================================================
 // ===                      I2C SETUP Items                     ===
@@ -211,7 +219,7 @@ void MPUMath() {
 }
 
 // ================================================================
-// ===                       Encoder SETUP                      ===
+// ===                      Encoder METHODS                     ===
 // ================================================================
 
 // Encoder for wheel rotation
@@ -223,6 +231,9 @@ Encoder flyEnc(16, 17);
 float flyEncPos;
 
 void encoderSetup() {
+  // Both encoder position can be initialised as 0
+  // The initial position of the flywheel is of no importance
+  // The initial position of the wheel is 0 at startup and thus also of no importance
   wheelEnc.write(0);
   flyEnc.write(0);
 }
@@ -238,17 +249,90 @@ void pollEncoders() {
 }
 
 // ================================================================
+// ===                       Motor METHODS                      ===
+// ================================================================
+
+// Source: https://www.pjrc.com/teensy/td_pulse.html#frequency
+// Pins M1A = 8 and M1B = 7 are controlled by FlexPWM1.3 timer
+// Pins M2A = 3 and M2B = 2 are controlled by FlexPWM4.2 timer
+void motorSetup() { 
+  // Check if pins still correct, otherwise setup will fail
+  assert((M1A == 8) && (M1B == 7));
+  assert((M2A == 3) && (M2B == 2));
+  
+  // Setup pins as output pins
+  pinMode(M1A, OUTPUT);
+  pinMode(M1B, OUTPUT);
+  pinMode(M2A, OUTPUT);
+  pinMode(M2B, OUTPUT);
+  // Setup PWM resolution
+  analogWriteResolution(12);
+  // Now use: analogWrite(port, 0 - 4095)
+  // Ideal frequency: 36621.09 Hz
+  analogWriteFrequency(M1A, 36621.09); // M1B frequency changes as well
+  analogWriteFrequency(M2A, 36621.09); // M2B frequency changes as well
+}
+
+void driveM1(float input) {
+  // Constrain input to motor voltage
+  float constrainedInput = constrain(input, -12.0, 12.0);
+  // Map to new range
+  int pwmInput = constrainedInput * 4095 / 12; // Automatically floored to int
+  // Write output for motor
+  analogWrite((pwmInput >= 0) ? M1A : M1B, pwmInput);
+}
+
+void driveM2(float input) {
+  // Constrain input to motor voltage
+  float constrainedInput = constrain(input, -12.0, 12.0);
+  // Map to new range
+  int pwmInput = constrainedInput * 4095 / 12; // Automatically floored to int
+  // Write output for motor
+  analogWrite((pwmInput >= 0) ? M2A : M2B, pwmInput);
+}
+
+void testMotors() {
+  // Drive forwards at 2 speeds
+  driveM1(6); driveM2(6);
+  delay(750);
+  driveM1(12); driveM2(12);
+  delay(750);
+  // Drive backwards at 2 speeds
+  driveM1(-6); driveM2(-6);
+  delay(750);
+  driveM1(-12); driveM2(-12);
+  delay(750);
+  driveM1(0); driveM2(0);
+}
+
+// ================================================================
 // ===                       Model SETUP                        ===
 // ================================================================
-const float A[4][4] = {{1,0.09393943,-0.11034489,-0.00341160},
+// Forward control
+// State: [x, dx, theta, dtheta]
+//        [distance travelled, speed, forward angle, rotational velocity]
+const float A_F[4][4] = {{1,0.09393943,-0.11034489,-0.00341160},
                                {0,0.86322326,-2.63312777,-0.11034489},
                                {0,0.06076874,2.59774256,0.14927222},
                                {0,1.45010660,38.28278264,2.59774256}};
-const float B[4] = {0.00153432,0.03462702,-0.01538449,-0.36711559};
-const float Q[4] = {10,2,2,1};
-const float R  = 0.3;
+const float B_F[4] = {0.00153432,0.03462702,-0.01538449,-0.36711559};
+const float Q_F[4] = {10,2,2,1};
+const float R_F = 0.3;
 
-LQR forwardLQR(A, B, Q, R);
+LQR forwardLQR(A_F, B_F, Q_F, R_F);
+
+// Sideways control
+// State: [phi, dphi, alpha, dalpha]
+//        [Side angle, rotational velocity, flywheel angle, rotational velocity]
+const float A_S[4][4] = {{1.41146607741256,0.113372087314826,0,-0.000255074418624809},
+                               {8.75203510129462,1.41146607741256,0,-0.00560148085730519},
+                               {0,0,1,0.111574942057396},
+                               {0,0,0,1.24010372302915}};
+const float B_S[4] = {0.00161439505458740,0.0354524104892734,-0.0732591269455416,-1.51964381664016};
+const float Q_S[4] = {1,1,0.5,0.5};
+const float R_S = 1;
+
+LQR sidewayLQR(A_S, B_S, Q_S, R_S);
 
 // Temporary
 float state[4] = {0.2,-0.1,-PI/72,0};
@@ -269,6 +353,12 @@ void setup() {
   timersSetup();
   Serial.println(F("Setting up motor encoders..."));
   encoderSetup();
+  Serial.println(F("Setting up motors..."));
+  motorSetup();
+  Serial.println(F("Testing motors in 2s..."));
+  delay(2000);
+  testMotors();
+  Serial.println(F("Motor test completed..."));
   
   pinMode(LED_PIN, OUTPUT);
 
@@ -307,6 +397,7 @@ void loop() {
 // ================================================================
 // ===                Debug Matrix/Vector Class                 ===
 // ================================================================
+// Put this in a unit test module or something
 void debugMatVec() {
   // Initialize
   float matArr[4][4] {{19,7,16,2},{19,19,8,3},{10,8,5,19},{10,3,9,20}};
@@ -322,22 +413,27 @@ void debugMatVec() {
   float matcol[4] {354,362,259,262};
   float vecvec[4][4] {{204,34,85,136},{12,2,5,8},{12,2,5,8},{48,8,20,32}};
 
-  Serial.print("Mat * Mat: ");
-  Serial.println((mat * mat) == Matrix4(mat2Arr));
-  Serial.print("Vec * Mat: ");
-  Serial.println((rowvec * mat) == RowVector4(rowmat));
-  Serial.print("Mat * Vec: ");
-  Serial.println((mat * colvec) == ColumnVector4(matcol));
-  Serial.print("Vec[row] * Vec[col]: ");
-  Serial.println((rowvec * colvec) == 243);
-  Serial.print("Vec[col] * Vec[row]: ");
-  Serial.println((colvec * rowvec) == Matrix4(vecvec));
-  Serial.print("Vec Transpose: ");
-  Serial.println(rowvec.T() == ColumnVector4(rowArr));
-  Serial.println("Matrix Inverse");
+  assert((mat * mat) == Matrix4(mat2Arr));
+  assert((rowvec * mat) == RowVector4(rowmat));
+  assert((mat * colvec) == ColumnVector4(matcol));
+  assert((rowvec * colvec) == 243);
+  assert((colvec * rowvec) == Matrix4(vecvec));
+  assert(rowvec.T() == ColumnVector4(rowArr));
   for (int i=0; i<4; i++){
     for (int j=0; j<4; j++){
-      Serial.println(mat.Inv().getElement(i, j), 5);
+      assert(mat.Inv().getElement(i, j), 5);
     }
   }
+}
+
+// handle diagnostic informations given by assertion and abort program execution:
+void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp) {
+    // transmit diagnostic informations through serial link. 
+    Serial.println(__func);
+    Serial.println(__file);
+    Serial.println(__lineno, DEC);
+    Serial.println(__sexp);
+    Serial.flush();
+    // abort program execution.
+    abort();
 }
