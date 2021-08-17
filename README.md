@@ -15,8 +15,8 @@ The goal of this project is to build a one-wheeled robot from scratch. This incl
 - [x] Component selection
 - [x] LQR control system design
 - [x] Circuit design
-- [ ] Coding
 - [ ] 3D printing parts and assembly
+- [ ] Coding
 - [ ] Countless hours of debugging untill this thing will work
 
 ### :computer: Simulation results
