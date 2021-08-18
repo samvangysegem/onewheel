@@ -31,3 +31,6 @@ The circuit is built on a prototyping PCB given the low complexity of the circui
 | --------- | -------- |
 ![](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Front.JPG) | ![](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Back.JPG)
 
+### Update
+Battery arrived! Short circuit occured when testing the motor interfaces on the prototyping PCB... Most likely caused by two wires that were too close to each other since the short circuit only occured when turning on the motor. Result: Teensy is broken due to a non-opertional voltage regulator and most likely further damage to the chip as well... The prototyping PCB has to be remade in a more secure way (avoiding unisolated wires close together). Luckily, the motor driver and battery remained undamaged and still operate correctly! Ordering a new Teensy and continuing the struggle :p 
+

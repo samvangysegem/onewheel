@@ -418,11 +418,6 @@ void debugMatVec() {
   assert((rowvec * colvec) == 243);
   assert((colvec * rowvec) == Matrix4(vecvec));
   assert(rowvec.T() == ColumnVector4(rowArr));
-  for (int i=0; i<4; i++){
-    for (int j=0; j<4; j++){
-      assert(mat.Inv().getElement(i, j), 5);
-    }
-  }
 }
 
 // handle diagnostic informations given by assertion and abort program execution:
