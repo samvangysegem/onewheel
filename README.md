@@ -31,6 +31,13 @@ The circuit is built on a prototyping PCB given the low complexity of the circui
 | --------- | -------- |
 ![](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Front.JPG) | ![](https://github.com/samvangysegem/onewheel/blob/main/Circuit/Back.JPG)
 
-### Update
-Battery arrived! Short circuit occured when testing the motor interfaces on the prototyping PCB... Most likely caused by two wires that were too close to each other since the short circuit only occured when turning on the motor. Result: Teensy is broken due to a non-opertional voltage regulator and most likely further damage to the chip as well... The prototyping PCB has to be remade in a more secure way (avoiding unisolated wires close together). Luckily, the motor driver and battery remained undamaged and still operate correctly! Ordering a new Teensy and continuing the struggle :p 
+### Mistakes
+Short circuit occured on the prototyping PCB during a motor test with battery supply. Upon closer inspection, the isolation of one of the motor wires melted during soldering. Solder from a wire next to it entered the isolation through this hole, nearly making contact with the other wire. Even though no short circuit was measured during testing, the higher current required for driving the motor in combination with slight wire movement (possibly) caused a short circuit between these two wires. As a result, a voltage of 12 V was applied to the GND output of the Teensy, resulting in a fried voltage regulator, IMU (also connected to this GND) in addition to internal damage of the Teensy. 
+
+**Conclusion** 
+- When wire isolation melted and unsure whether a short circuit will occur, assume the worst
+- Test motor interfaces first, without Teensy
+
+
+during a test with battery supply when testing the motor interfaces on the prototyping PCB... Most likely caused by two wires that were too close to each other since the short circuit only occured when turning on the motor. Result: Teensy is broken due to a non-opertional voltage regulator and most likely further damage to the chip as well... The prototyping PCB has to be remade in a more secure way (avoiding unisolated wires close together). Luckily, the motor driver and battery remained undamaged and still operate correctly! Ordering a new Teensy and continuing the struggle :p 
 
