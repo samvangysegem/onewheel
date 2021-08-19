@@ -38,6 +38,3 @@ Short circuit occured on the prototyping PCB during a motor test with battery su
 - When wire isolation melted and unsure whether a short circuit will occur, assume the worst
 - Test motor interfaces first, without Teensy
 
-
-during a test with battery supply when testing the motor interfaces on the prototyping PCB... Most likely caused by two wires that were too close to each other since the short circuit only occured when turning on the motor. Result: Teensy is broken due to a non-opertional voltage regulator and most likely further damage to the chip as well... The prototyping PCB has to be remade in a more secure way (avoiding unisolated wires close together). Luckily, the motor driver and battery remained undamaged and still operate correctly! Ordering a new Teensy and continuing the struggle :p 
-
