@@ -272,36 +272,30 @@ void motorSetup() {
   analogWriteFrequency(M2A, 36621.09); // M2B frequency changes as well
 }
 
-void driveM1(float input) {
+void driveMotor(float input, short portA, short portB) {
+  // Quick action for input 0
+  if (input == 0.0){
+    analogWrite(portA, 0);
+    analogWrite(portB, 0);
+    return;
+  }
   // Constrain input to motor voltage
   float constrainedInput = constrain(input, -12.0, 12.0);
-  // Map to new range
-  int pwmInput = constrainedInput * 4095 / 12; // Automatically floored to int
+  // Sign and Map to new range
+  int signInput = sgn(constrainedInput);
+  int pwmInput = abs(constrainedInput) * 4095 / 12; // Automatically floored to int
   // Write output for motor
-  analogWrite((pwmInput >= 0) ? M1A : M1B, pwmInput);
-}
-
-void driveM2(float input) {
-  // Constrain input to motor voltage
-  float constrainedInput = constrain(input, -12.0, 12.0);
-  // Map to new range
-  int pwmInput = constrainedInput * 4095 / 12; // Automatically floored to int
-  // Write output for motor
-  analogWrite((pwmInput >= 0) ? M2A : M2B, pwmInput);
+  analogWrite((signInput == 1) ? portB : portA, 0); // In case 0 isn't perfectly crossed, turn off other PWM signal
+  analogWrite((signInput == 1) ? portA : portB, pwmInput);
 }
 
 void testMotors() {
-  // Drive forwards at 2 speeds
-  driveM1(6); driveM2(6);
-  delay(750);
-  driveM1(12); driveM2(12);
-  delay(750);
-  // Drive backwards at 2 speeds
-  driveM1(-6); driveM2(-6);
-  delay(750);
-  driveM1(-12); driveM2(-12);
-  delay(750);
-  driveM1(0); driveM2(0);
+  // Drive forwards and backwards at different speeds
+  for (int i=-12; i<=12; i++){
+    driveMotor(i, M1A, M1B); driveMotor(i, M2A, M2B);
+    delay(500);
+  }
+  driveMotor(0, M1A, M1B); driveMotor(0, M2A, M2B);
 }
 
 // ================================================================
@@ -343,7 +337,7 @@ float ksi[4] = {0,0,0,0};
 void setup() {
   Serial.begin(115200);
   // Wait for Serial Monitor to be ready
-  while (!Serial); 
+  // while (!Serial); 
   Serial.println(F("Setting up I2C..."));
   i2cSetup();
   Serial.println(F("Initialising MPU6050..."));

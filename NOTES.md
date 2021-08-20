@@ -36,7 +36,7 @@ Calculator: https://www.bbman.com/belt-length-calculator/
     * 3D Model: https://www.traceparts.com/en/product/gates-standard-pulley-t5-pitch-5-mm-width-10-mm-number-of-teeth-16?CatalogPath=TRACEPARTS%3ATP01005001001002&Product=32-28092010-116015&PartNumber=P21T5162FA
 
 * Belt: 220mm length
-    * Online store: z
+    * Online store: https://nl.rs-online.com/web/p/timing-belts/4745347/
 
 ## Software Design
 Control is split up in forwards and sideways control, assuming independent systems (which off course is not correct but for sufficiently small deviations should provide a good approach to control). 
