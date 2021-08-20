@@ -40,7 +40,7 @@ Since the first design immediately burned down upon testing, as described in the
 ![](https://github.com/samvangysegem/onewheel/blob/main/Images/Front_Mk2.JPG) | ![](https://github.com/samvangysegem/onewheel/blob/main/Images/Back_Mk2.JPG)
 
 ### :hammer_and_wrench: Assembly
-A few hours of "being creative with incorrect dimensioning of bearing clearances and shaft diameters" later, the full assembly is finished. No short circuits, not falling apart and it looks pretty sweet even if I say so myself...
+A few hours of "being creative with incorrect dimensioning of bearing clearances and shaft diameters" later, the full assembly is finished (except for the belt, which is still on its way but we can imagine that part). No short circuits, not falling apart and it looks pretty sweet even if I say so myself...
 
 ![](https://github.com/samvangysegem/onewheel/blob/main/Images/Assembly.JPG)
 
