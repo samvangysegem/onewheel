@@ -313,6 +313,8 @@ const float Q_F[4] = {10,2,2,1};
 const float R_F = 0.3;
 
 LQR forwardLQR(A_F, B_F, Q_F, R_F);
+float forwardState[4] = {0,0,0,0};
+float forwardKsi[4] = {0,0,0,0};
 
 // Sideways control
 // State: [phi, dphi, alpha, dalpha]
@@ -326,10 +328,20 @@ const float Q_S[4] = {1,1,0.5,0.5};
 const float R_S = 1;
 
 LQR sidewayLQR(A_S, B_S, Q_S, R_S);
+float sidewayState[4] = {0,0,0,0};
+float sidewayKsi[4] = {0,0,0,0};
 
-// Temporary
-float state[4] = {0.2,-0.1,-PI/72,0};
-float ksi[4] = {0,0,0,0};
+// ================================================================
+// ===                         OTHER                            ===
+// ================================================================
+
+void detectStart() {
+  
+}
+
+void detectFall() {
+  
+}
 
 // ================================================================
 // ===                         SETUP                            ===
