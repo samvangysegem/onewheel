@@ -102,7 +102,7 @@ float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 byte StartUP = 100;     // lets get 100 readings from the MPU before we start trusting them
 
-int MPUOffsets[6] = {-990,-1285,1185,-14,71,95};
+int MPUOffsets[6] = {-8423, -565, 1008, 58, -38, 64};
 
 void MPU6050Connect() {
   static int MPUInitCntr = 0; // Static: not deleted when function ends which allows values to be reused in subsequent function calls
@@ -141,10 +141,10 @@ void MPU6050Connect() {
   mpu.setYGyroOffset(MPUOffsets[4]);
   mpu.setZGyroOffset(MPUOffsets[5]);
   
-  // Calibration Time: generate offsets and calibrate our MPU6050 (6 loops -> 600 readings)
-  mpu.CalibrateAccel(6);
-  mpu.CalibrateGyro(6);
-  mpu.PrintActiveOffsets();
+  // No calibration is required since this has been done beforehand
+  //mpu.CalibrateAccel(6);
+  //mpu.CalibrateGyro(6);
+  //mpu.PrintActiveOffsets();
   Serial.println(F("Enabling DMP..."));
   mpu.setDMPEnabled(true);
   packetSize = mpu.dmpGetFIFOPacketSize();
@@ -213,9 +213,9 @@ void MPUMath() {
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
   
-  Yaw = (ypr[0] * 180.0 / M_PI);
-  Pitch = (ypr[1] * 180.0 / M_PI);
-  Roll = (ypr[2] * 180.0 / M_PI);
+  Yaw = (ypr[0] * 180.0 / M_PI); // Z
+  Pitch = (ypr[1] * 180.0 / M_PI); // Y
+  Roll = (ypr[2] * 180.0 / M_PI); // X
 }
 
 // ================================================================
@@ -272,7 +272,7 @@ void motorSetup() {
   analogWriteFrequency(M2A, 36621.09); // M2B frequency changes as well
 }
 
-void driveMotor(float input, short portA, short portB) {
+void driveMotor(float input, uint8_t portA, uint8_t portB) {
   // Quick action for input 0
   if (input == 0.0){
     analogWrite(portA, 0);
@@ -282,8 +282,8 @@ void driveMotor(float input, short portA, short portB) {
   // Constrain input to motor voltage
   float constrainedInput = constrain(input, -12.0, 12.0);
   // Sign and Map to new range
-  int signInput = sgn(constrainedInput);
-  int pwmInput = abs(constrainedInput) * 4095 / 12; // Automatically floored to int
+  int8_t signInput = sgn(constrainedInput);
+  uint16_t pwmInput = abs(constrainedInput) * 4095 / 12; // Automatically floored to int
   // Write output for motor
   analogWrite((signInput == 1) ? portB : portA, 0); // In case 0 isn't perfectly crossed, turn off other PWM signal
   analogWrite((signInput == 1) ? portA : portB, pwmInput);
@@ -291,11 +291,17 @@ void driveMotor(float input, short portA, short portB) {
 
 void testMotors() {
   // Drive forwards and backwards at different speeds
-  for (int i=-12; i<=12; i++){
-    driveMotor(i, M1A, M1B); driveMotor(i, M2A, M2B);
-    delay(500);
-  }
-  driveMotor(0, M1A, M1B); driveMotor(0, M2A, M2B);
+  driveMotor(1, M1A, M1B); 
+  delay(250);
+  driveMotor(-1, M1A, M1B);
+  delay(250);
+  driveMotor(0, M1A, M1B);
+  delay(250);
+  driveMotor(1, M2A, M2B);
+  delay(250);
+  driveMotor(-1, M2A, M2B);
+  delay(250);
+  driveMotor(0, M2A, M2B);
 }
 
 // ================================================================
@@ -332,15 +338,28 @@ float sidewayState[4] = {0,0,0,0};
 float sidewayKsi[4] = {0,0,0,0};
 
 // ================================================================
-// ===                         OTHER                            ===
+// ===                        CONTROL                           ===
 // ================================================================
 
 void detectStart() {
-  
+  // 
 }
 
 void detectFall() {
+  // Pitch and roll outside safety range
   
+}
+
+void updateState() {
+  // Get current state
+  
+  // Get IMU and Encoder data
+  pollDMP();
+  pollEncoders();
+  // Use Kalman filter to determine velocities (or low pass filter)
+  
+  // Updat state vectors accordingly
+  forwardState = {}
 }
 
 // ================================================================
@@ -366,23 +385,6 @@ void setup() {
   Serial.println(F("Motor test completed..."));
   
   pinMode(LED_PIN, OUTPUT);
-
-  if (DEBUGMODE) {
-    // Debug Matrix and Vector classes
-    Serial.println(F("Debug section"));
-    debugMatVec();
-
-    // Debug LQR control
-    
-    unsigned long time1 = micros();
-    float input = forwardLQR.getControl(state, ksi);
-    unsigned long time2 = micros();
-    Serial.println(F("LQR Control [V]"));
-    Serial.println(input, 4);
-    Serial.println(F("LQR Control Calculation Time [us]"));
-    Serial.println(time2-time1);
-    Serial.println(F("Debug complete"));
-  }
 }
 
 // ================================================================
