@@ -6,31 +6,13 @@
 
 class Kalman {
   public:
-      // Constructor for this class
-      Kalman();
+        // Constructor for this class
+        Kalman();
+        Kalman(const float (&_Ad)[4][4], const float (&_Bd)[4], const float (&_Cd)[4], const float (&_V)[4]);
   
   public:
-      // The angle should be in degrees and the rate should be in degrees per second and the delta time in seconds
-      float getAngle(float newAngle, float newRate, float dt);
-  
-      void setAngle(float angle) { this->angle = angle; }; // Used to set angle, this should be set as the starting angle
-      float getRate() { return this->rate; }; // Return the unbiased rate
-  
-      /* These are used to tune the Kalman filter */
-      void setQangle(float Q_angle) { this->Q_angle = Q_angle; };
-      void setQbias(float Q_bias) { this->Q_bias = Q_bias; };
-      void setRmeasure(float R_measure) { this->R_measure = R_measure; };
-  
-      float getQangle() { return this->Q_angle; };
-      float getQbias() { return this->Q_bias; };
-      float getRmeasure() { return this->R_measure; };
-  
-      /**
-       * setQbias(float Q_bias)
-       * Default value (0.003f) is in Kalman.cpp. 
-       * Raise this to follow input more closely,
-       * lower this to smooth result of kalman filter.
-       */
+        // Update filter and return state estimate
+        ColumnVector4 updateFilter(ColumnVector4& STATE, ColumnVector4& OBS_STATE, float INPUT);
   
   private:
         // Model matrices
@@ -42,6 +24,10 @@ class Kalman {
 
         // Covariance matrix of the measurement noise
         Matrix4 V;
+
+        // Kalman filter
+        Matrix4 P;
+        Matrix4 H;
 };
 
 #endif

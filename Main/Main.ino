@@ -318,9 +318,10 @@ const float B_F[4] = {0.00153432,0.03462702,-0.01538449,-0.36711559};
 const float Q_F[4] = {10,2,2,1};
 const float R_F = 0.3;
 
-LQR forwardLQR(A_F, B_F, Q_F, R_F);
-float forwardState[4] = {0,0,0,0};
-float forwardKsi[4] = {0,0,0,0};
+LQR LQR_F(A_F, B_F, Q_F, R_F);
+ColumnVector4 STATE_F;
+ColumnVector4 OBS_STATE_F;
+ColumnVector4 DES_STATE_F;
 
 // Sideways control
 // State: [phi, dphi, alpha, dalpha]
@@ -333,9 +334,10 @@ const float B_S[4] = {0.00161439505458740,0.0354524104892734,-0.0732591269455416
 const float Q_S[4] = {1,1,0.5,0.5};
 const float R_S = 1;
 
-LQR sidewayLQR(A_S, B_S, Q_S, R_S);
-float sidewayState[4] = {0,0,0,0};
-float sidewayKsi[4] = {0,0,0,0};
+LQR LQR_S(A_S, B_S, Q_S, R_S);
+ColumnVector4 STATE_S;
+ColumnVector4 OBS_STATE_S;
+ColumnVector4 DES_STATE_S;
 
 // ================================================================
 // ===                        CONTROL                           ===
