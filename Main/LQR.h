@@ -13,7 +13,7 @@ class LQR {
     
     public:
         // Set/Get methods
-        float getControl(const float (&state)[4], const float (&ksi)[4]); // Don't change original arrays here
+        void computeInput(const ColumnVector4& State, const ColumnVector4& Des_State, float& input); // Don't change original arrays here
 
     private:
         // Model and control variables

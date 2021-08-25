@@ -2,22 +2,9 @@
 clc;
 clear all;
 
-%% Matrix Debug Verify
-
-mat1 = [19,7,16,2;19,19,8,3;10,8,5,19;10,3,9,20];
-rowvec = [12,2,5,8];
-columnvec = [17;1;1;4];
-
-mat1*mat1;
-rowvec*mat1;
-mat1*columnvec;
-rowvec*columnvec;
-vecvec = columnvec*rowvec;
-mat1inv = inv(mat1);
-
 %% Initialize values
 % Samplefrequency
-Ts = 1/10;
+Ts = 1/40;
 
 % Onewheel
 M = 1000*10^(-3); %[kg]
@@ -66,14 +53,41 @@ C(2,3) = 1; % theta is measured (IMU)
 % CT System
 ct_sys = ss(A,B,C,D);
 
-%% LQR Control
-% [K,S,e] = lqr(ct_sys,diag([0.01 20 1 20]),1);
-% ct_sys_cont = ss(A-B*K,B,C,D);
+%% PID for Vertical Position: State Space Model (F/B Movement) - Continuous Time
+% State:
+% [x] -> Robot distance travelled
+% [dx]
+% [theta] -> Robot angle
+% [dtheta]
+% Init
 
-%% LQR Control with state tracking (infinite horizon)
+A = zeros(4,4);
+B = zeros(4,1);
+C = zeros(1,4);
+D = zeros(1,1);
+
+A(1,2) = 1;
+A(3,4) = 1;
+A(2,2) = -K_phi*K_t*(L^2*M + Iyy_g)*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
+A(2,3) = -R_w^2*L^2*M^2*g*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+A(4,2) = L*K_phi*K_t*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
+A(4,3) = L*((M + m_w)*R_w^2 + I_w)*g*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+
+B(2,1) = R_w*K_t*(L^2*M + Iyy_g)*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
+B(4,1) = -L*K_t*R_w*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
+
+C(1,3) = 1; % x is measured (motor encoder)
+
+% CT System
+ct_sys = ss(A,B,C,D);
+
+%% DT system from CT model
 % DT System
 dt_sys = c2d(ct_sys,Ts);
 [Ad, Bd, Cd, Dd, Ts_d] = ssdata(dt_sys);
+controlSystemDesigner(dt_sys);
+
+%% LQR Control with state tracking (infinite horizon)
 % Desired state
 ksi = [1;0;0;0];
 % Cost for state and input 
@@ -85,6 +99,15 @@ G = (Ad - eye(4))*ksi; % Last vector is desired state
 [M,K,] = idare(Ad,Bd,Q,R,[],[], 'noscaling');
 % Disturbance vector
 r = mldivide(eye(4)-transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad), transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad)*M*G);
+
+%% PID Gains
+
+Kp = (-1)*sum(Con.Z{1,1})*Con.K;
+Ti = Kp/(prod(Con.Z{1,1})*Con.K);
+Td = Con.K/Kp;
+
+Kd = Kp * Td
+Ki = Kp / Ti
 
 %% 
 Mprev = 0;
@@ -104,12 +127,12 @@ ksi = [0;0;0;0];
 
 u = -(R+transpose(Bd)*Mcurr*Bd)\transpose(Bd)*(Mcurr*Ad*(x-ksi)+Mcurr*G+r);
 
-%% System simulation
-% Simulation time
-Tend = 10;
+%% System simulation - LQR
+% Simulation time 
+Tend = 2;
 
 % Initial conditions
-x = [0.2;-0.4;-pi/36;0];
+x = [0.2;-0.2;-pi/36;0];
 t = 0:Ts:(Tend-Ts);
 
 % Simulation system
@@ -123,12 +146,22 @@ x_res = zeros(length(t_res), 4);
 x_res(1,:) = transpose(x);
 u_res = zeros(length(t_res), 1);
 
+% PID Control
+errorInt = 0;
+prevErr = x(3);
+
 % Simulation
 index = 2;
 u_index = 1;
 for i=t
     % Determine input (Feedback matrices included)
-    u = -(R+transpose(Bd)*M*Bd)\transpose(Bd)*(M*Ad*(x-ksi)+M*G+r);
+    %u = -(R+transpose(Bd)*M*Bd)\transpose(Bd)*(M*Ad*(x-ksi)+M*G+r);
+    
+    % PID
+    errorInt = errorInt + y * Ts;
+    u = Kp * y + Kd * (y - prevErr) / Ts + Ki * errorInt;
+    prevErr = y;
+    
     % Input boundaries
     if abs(u)>12
         u = 12 * sign(u);
@@ -149,23 +182,23 @@ for i=t
 end
 
 %% Animation
-% 
-% % Show animation
-% set(gcf, 'Position',  [100, 100, 1500, 600]); % Set size of figure window
-% shg; % Show graph
-% for i=1:length(t_res)
-%     plot([x_res(i,1),x_res(i,1)+L*sin(x_res(i,3))],[R_w,R_w+L*cos(x_res(i,3))],"ko-"); hold on;
-%     plot([x_res(i,1),x_res(i,1)+R_w*sin(x_res(i,1)/R_w)],[R_w,R_w+R_w*cos(x_res(i,1)/R_w)],"k-");
-%     th = 0:pi/20:2*pi;
-%     plot(0.04 * cos(th) + x_res(i,1), 0.04 * sin(th) + R_w,"k-");
-%     yline(0); hold off;
-%     % Set axis parameters
-%     xlim([-0.15 1.15]);
-%     ylim([-0.1 0.3]);
-%     pbaspect([3.25 1 1]);
-%     % axis equal;
-%     pause(0.0001);
-% end
+ 
+ % Show animation
+ set(gcf, 'Position',  [100, 100, 1500, 600]); % Set size of figure window
+ shg; % Show graph
+ for i=1:length(t_res)
+     plot([x_res(i,1),x_res(i,1)+L*sin(x_res(i,3))],[R_w,R_w+L*cos(x_res(i,3))],"ko-"); hold on;
+     plot([x_res(i,1),x_res(i,1)+R_w*sin(x_res(i,1)/R_w)],[R_w,R_w+R_w*cos(x_res(i,1)/R_w)],"k-");
+     th = 0:pi/20:2*pi;
+     plot(0.04 * cos(th) + x_res(i,1), 0.04 * sin(th) + R_w,"k-");
+     yline(0); hold off;
+     % Set axis parameters
+     xlim([-0.15 1.15]);
+     ylim([-0.1 0.3]);
+     pbaspect([3.25 1 1]);
+     % axis equal;
+     pause(0.0001);
+ end
 
 %% Initialize video
 
@@ -173,7 +206,7 @@ myVideo = VideoWriter('OneDuine_Mk1','MPEG-4'); %open video file
 myVideo.FrameRate = 100;  %can adjust this, 5 - 10 works well for me
 open(myVideo)
 %filename_ctrl_gif = 'ForwardControl_Control.gif';
-filename_anim_gif = 'ForwardControl_Animation.gif';
+filename_anim_gif = 'TEST.gif';
 set(gcf, 'Position',  [100, 100, 1450, 1000]);
 set(gcf, 'color', 'w');
 for i=1:length(t_res)

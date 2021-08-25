@@ -1,4 +1,3 @@
-
 #include "Kalman.h"
 
 Kalman::Kalman() {
@@ -16,8 +15,11 @@ Kalman::Kalman(const float (&_Ad)[4][4], const float (&_Bd)[4], const float (&_C
     P = Matrix4(P_COV);
 }
 
-ColumnVector4 Kalman::updateFilter(ColumnVector4& STATE, ColumnVector4& OBS_STATE, float INPUT) {
-    // Predict and update scheme
-    STATE = Ad * STATE + Bd * INPUT + H * (OBS_STATE - Cd * STATE);
+void Kalman::updateState(ColumnVector4& State, ColumnVector4& Obs_State, float Input) {
+    // Predict
+    H = Ad * P * Cd.T() * (V + Cd * P * Cd.T()).Inv();
+    State = Ad * State + Bd * Input + H * (Obs_State - Cd * State);
+    // Update
+    P = (Ad - H * Cd) * P * Ad.T();
 }
 

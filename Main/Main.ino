@@ -20,6 +20,7 @@
 #endif
 
 #define sgn(x) ((x) < 0 ? -1 : 1)
+#define CONTROL_FREQUENCY 10 // Hz
 
 // ================================================================
 // ===                        LIBRARIES                         ===
@@ -29,21 +30,21 @@
 #include <assert.h>
 #include <Wire.h>
 #include <I2Cdev.h>
-// #include "MPU6050.h"
 #include <MPU6050_6Axis_MotionApps20.h>
 #include <Encoder.h>
 
 // Custom libraries
 #include "Kalman.h"
 #include "LQR.h"
+#include "PID.h"
 
 #define LED_PIN 13
 
 #define M1A 8 
 #define M1B 7
 
-#define M2A 3
-#define M2B 2
+#define M2A 2
+#define M2B 3
 
 // ================================================================
 // ===                      I2C SETUP Items                     ===
@@ -73,7 +74,7 @@ IntervalTimer controlTimer;
 
 void timersSetup() {
   controlTimer.priority(1);
-  controlTimer.begin(controlInterruptHandler, 100000); // Update frequency of 10 Hz
+  controlTimer.begin(controlInterruptHandler, 1000000/CONTROL_FREQUENCY); // Expressed in microseconds
 }
 
 // ================================================================
@@ -97,6 +98,7 @@ VectorInt16 aa;         // [x, y, z]            accel sensor measurements
 VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
 VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
+VectorInt16 gyro;       // [x, y, z]            rotational velocities around all three axes
 
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
@@ -164,7 +166,7 @@ void GetDMP() {
   FifoAlive = 1;
   fifoCount = mpu.getFIFOCount();
   if ((!fifoCount) || (fifoCount % packetSize)) { // we have failed Reset and wait till next time!
-    digitalWrite(LED_PIN, LOW); // lets turn off the blinking light so we can see we are failing.
+    // digitalWrite(LED_PIN, LOW); // lets turn off the blinking light so we can see we are failing.
     mpu.resetFIFO();// clear the buffer and start over
   } else {
     while (fifoCount  >= packetSize) { // Get the packets until we have the latest!
@@ -173,7 +175,7 @@ void GetDMP() {
     }
     // LastGoodPacketTime = millis();
     MPUMath(); // <<<<<<<<<<<<<<<<<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<<<<<
-    digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Blink the Light
+    // digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Blink the Light
   }
 }
 
@@ -183,6 +185,7 @@ void GetDMP() {
 // Alternative to GetDMP without use of interrupts
 
 float Yaw, Pitch, Roll;
+float YawVel, PitchVel, RollVel;
 
 void pollDMP() {
   // Clear MPU value in order to get latest value
@@ -196,11 +199,15 @@ void pollDMP() {
   // Further calculations
   MPUMath();
   // Blink LED
-  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  // digitalWrite(LED_PIN, !digitalRead(LED_PIN));
   // DEBUG Purposes
   DPRINTSFN(15, " Yaw:", Yaw, -6, 2);
   DPRINTSFN(15, " Pitch:", Pitch, -6, 2);
   DPRINTSFN(15, " Roll:", Roll, -6, 2);
+  DPRINTLN();
+  DPRINTSFN(15, " Yaw Vel:", YawVel, -6, 4);
+  DPRINTSFN(15, " Pitch Vel:", PitchVel, -6, 4);
+  DPRINTSFN(15, " Roll Vel:", RollVel, -6, 4);
   DPRINTLN();
 }
 
@@ -209,13 +216,18 @@ void pollDMP() {
 // ================================================================
 
 void MPUMath() {
+  mpu.dmpGetGyro(&gyro, fifoBuffer);
   mpu.dmpGetQuaternion(&q, fifoBuffer);
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+
+  YawVel = gyro.z / 32768.0 * 2000.0 * DEG_TO_RAD;
+  PitchVel = gyro.y / 32768.0 * 2000.0  * DEG_TO_RAD;
+  RollVel = gyro.x / 32768.0 * 2000.0  * DEG_TO_RAD;
   
-  Yaw = (ypr[0] * 180.0 / M_PI); // Z
-  Pitch = (ypr[1] * 180.0 / M_PI); // Y
-  Roll = (ypr[2] * 180.0 / M_PI); // X
+  Yaw = ypr[0]; // Z
+  Pitch = ypr[1]; // Y
+  Roll = ypr[2]; // X
 }
 
 // ================================================================
@@ -224,11 +236,11 @@ void MPUMath() {
 
 // Encoder for wheel rotation
 Encoder wheelEnc(21, 22);
-float wheelEncPos;
+float wheelEncPos, wheelEncVel;
 
 // Encoder for flywheel rotation
 Encoder flyEnc(16, 17);
-float flyEncPos;
+float flyEncPos, flyEncVel;
 
 void encoderSetup() {
   // Both encoder position can be initialised as 0
@@ -240,11 +252,18 @@ void encoderSetup() {
 
 void pollEncoders() {
   // Get position information
-  wheelEncPos = wheelEnc.read() / (18.75 * 64.0) * 360.0;
-  flyEncPos = flyEnc.read() / (18.75 * 64.0) * 360.0;
+  float oldWheelEncPos = wheelEncPos;
+  wheelEncPos = wheelEnc.read() / (18.75 * 64.0) * 2 * PI;
+  wheelEncVel = CONTROL_FREQUENCY * (wheelEncPos - oldWheelEncPos);
+  float oldFlyEncPos = flyEncPos;
+  flyEncPos = flyEnc.read() / (18.75 * 64.0) * 2 * PI;
+  flyEncVel = CONTROL_FREQUENCY * (flyEncPos - oldFlyEncPos);
   // DEBUG
-  DPRINTSFN(10, " Wheel Encoder:", wheelEncPos, -6, 2);
+  DPRINTSFN(10, " Wheel Encoder:", wheelEncPos * 0.04, -6, 2);
   DPRINTSFN(10, " Fly Encoder:", flyEncPos, -6, 2);
+  DPRINTLN();
+  DPRINTSFN(10, " Wheel Encoder Vel:", wheelEncVel * 0.04, -6, 2);
+  DPRINTSFN(10, " Fly Encoder Vel:", flyEncVel, -6, 2);
   DPRINTLN();
 }
 
@@ -258,7 +277,7 @@ void pollEncoders() {
 void motorSetup() { 
   // Check if pins still correct, otherwise setup will fail
   assert((M1A == 8) && (M1B == 7));
-  assert((M2A == 3) && (M2B == 2));
+  assert((M2A == 2) && (M2B == 3));
   // Setup pins as output pins
   pinMode(M1A, OUTPUT);
   pinMode(M1B, OUTPUT);
@@ -315,13 +334,17 @@ const float A_F[4][4] = {{1,0.09393943,-0.11034489,-0.00341160},
                                {0,0.06076874,2.59774256,0.14927222},
                                {0,1.45010660,38.28278264,2.59774256}};
 const float B_F[4] = {0.00153432,0.03462702,-0.01538449,-0.36711559};
-const float Q_F[4] = {10,2,2,1};
-const float R_F = 0.3;
+const float C_F[4] = {1,1,1,1};
+const float Q_F[4] = {10,2,2,1}; // State deviation weight LQR
+const float V_F[4] = {0.1,0.1,0.1,0.1}; // Verify through measurements
+const float R_F = 0.3; // Input weight LQR
+float U_F = 0;
 
 LQR LQR_F(A_F, B_F, Q_F, R_F);
-ColumnVector4 STATE_F;
-ColumnVector4 OBS_STATE_F;
-ColumnVector4 DES_STATE_F;
+Kalman KALMAN_F(A_F, B_F, C_F, V_F);
+ColumnVector4 State_F;
+ColumnVector4 Obs_State_F;
+ColumnVector4 Des_State_F;
 
 // Sideways control
 // State: [phi, dphi, alpha, dalpha]
@@ -331,37 +354,77 @@ const float A_S[4][4] = {{1.41146607741256,0.113372087314826,0,-0.00025507441862
                                {0,0,1,0.111574942057396},
                                {0,0,0,1.24010372302915}};
 const float B_S[4] = {0.00161439505458740,0.0354524104892734,-0.0732591269455416,-1.51964381664016};
-const float Q_S[4] = {1,1,0.5,0.5};
-const float R_S = 1;
+const float C_S[4] = {};
+const float Q_S[4] = {1,1,0.5,0.5}; // State deviation weight LQR
+const float V_S[4] = {0.1,0.1,0.1,0.1}; // Verify through measurements
+const float R_S = 1; // Input weight LQR
+float U_S = 0;
 
 LQR LQR_S(A_S, B_S, Q_S, R_S);
-ColumnVector4 STATE_S;
-ColumnVector4 OBS_STATE_S;
-ColumnVector4 DES_STATE_S;
+Kalman KALMAN_S(A_S, B_S, C_S, V_S);
+ColumnVector4 State_S;
+ColumnVector4 Obs_State_S;
+ColumnVector4 Des_State_S;
 
 // ================================================================
 // ===                        CONTROL                           ===
 // ================================================================
 
-void detectStart() {
-  // 
+PID PID_F(448.603, 85.0900, 391.9253, (1/CONTROL_FREQUENCY))
+
+bool detectStart() {
+  // Pitch and roll inside start range
+  if ((abs(Pitch) < (5 * PI / 180.0)) && (abs(Roll) < (5 * PI / 180))) {
+    // Turn off LED
+    digitalWrite(LED_PIN, LOW);
+    delay(500);
+    return true;
+  }
+  return false;
 }
 
-void detectFall() {
+bool detectFall() {
   // Pitch and roll outside safety range
-  
+  if ((abs(Pitch) > (30 * PI / 180.0)) || (abs(Roll) > (20 * PI / 180.0))) {
+    // Safety procedure
+    // Stop motors
+    driveMotor(0, M1A, M1B);
+    driveMotor(0, M2A, M2B);
+    // Turn on LED
+    digitalWrite(LED_PIN, HIGH);
+    return true;
+  }
+  return false;
 }
 
-void updateState() {
-  // Get current state
-  
+void updateStates() {
   // Get IMU and Encoder data
   pollDMP();
   pollEncoders();
+  // Update observations
+  Obs_State_F.setElement(0, wheelEncPos * 0.04); // distance travelled
+  Obs_State_F.setElement(1, wheelEncVel * 0.04); // speed
+  Obs_State_F.setElement(2, -1 * Pitch); // forward angle
+  Obs_State_F.setElement(3, PitchVel); // rotational velocity
+  Obs_State_S.setElement(0, Roll); // side angle
+  Obs_State_S.setElement(1, RollVel); // rotational velocity sideways
+  Obs_State_S.setElement(2, flyEncPos); // flywheel angle
+  Obs_State_S.setElement(3, flyEncVel); // rotational velocity flywheel
   // Use Kalman filter to determine velocities (or low pass filter)
-  
-  // Updat state vectors accordingly
-  forwardState = {}
+  KALMAN_F.updateState(State_F, Obs_State_F, U_F);
+  KALMAN_S.updateState(State_S, Obs_State_S, U_S);
+}
+
+void computeInputs() {
+  // LQR model for computing inputs
+  LQR_F.computeInput(Obs_State_F, Des_State_F, U_F);
+  LQR_S.computeInput(State_S, Des_State_S, U_S);
+}
+
+void applyControl() {
+  // Apply calculated inputs to correct motors
+  //driveMotor(U_S, M1A, M1B); // Flywheel
+  driveMotor(U_F, M2A, M2B); // Wheel
 }
 
 // ================================================================
@@ -370,13 +433,13 @@ void updateState() {
 void setup() {
   Serial.begin(115200);
   // Wait for Serial Monitor to be ready
-  // while (!Serial); 
+  #ifdef DEBUG
+    //while (!Serial); 
+  #endif
   Serial.println(F("Setting up I2C..."));
   i2cSetup();
   Serial.println(F("Initialising MPU6050..."));
   MPU6050Connect();
-  Serial.println(F("Setting up interrupt timers..."));
-  timersSetup();
   Serial.println(F("Setting up motor encoders..."));
   encoderSetup();
   Serial.println(F("Setting up motors..."));
@@ -385,21 +448,36 @@ void setup() {
   delay(2000);
   testMotors();
   Serial.println(F("Motor test completed..."));
+  Serial.println(F("Setting up interrupt timers..."));
+  timersSetup();
   
   pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
 }
 
 // ================================================================
 // ===                          Loop                            ===
 // ================================================================
 void loop() {
-  if (controlInterrupt) {
-    // Turn update flag off
-    controlInterrupt = false;
-    // Get updated position data
+  
+  while (!detectStart()) {
+    // Update IMU values
     pollDMP();
-    // Get encoder position data
-    pollEncoders();
+    delay(50);
+  }
+  
+  while (!detectFall()) {
+    // Check for control interrupt
+    if (controlInterrupt) {
+      // Turn update flag off
+      controlInterrupt = false;
+      // Update States
+      updateStates();
+      // Calculate control
+      computeInputs();
+      // Apply control
+      applyControl();
+    }
   }
 }
 

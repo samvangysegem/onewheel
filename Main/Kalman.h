@@ -12,7 +12,7 @@ class Kalman {
   
   public:
         // Update filter and return state estimate
-        ColumnVector4 updateFilter(ColumnVector4& STATE, ColumnVector4& OBS_STATE, float INPUT);
+        void updateState(ColumnVector4& State, ColumnVector4& Obs_State, float Input);
   
   private:
         // Model matrices
