@@ -4,7 +4,7 @@ clear all;
 
 %% Initialize values
 % Samplefrequency
-Ts = 1/40;
+Ts = 1/10;
 
 % Onewheel
 M = 1000*10^(-3); %[kg]
@@ -24,36 +24,7 @@ K_t = 0.158; %[Nm/A]
 % General
 g = 9.81;
 
-%% State Space Model (F/B Movement) - Continuous Time
-% State:
-% [x] -> Robot distance travelled
-% [dx]
-% [theta] -> Robot angle
-% [dtheta]
-% Init
-
-A = zeros(4,4);
-B = zeros(4,1);
-C = zeros(2,4);
-D = zeros(2,1);
-
-A(1,2) = 1;
-A(3,4) = 1;
-A(2,2) = -K_phi*K_t*(L^2*M + Iyy_g)*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
-A(2,3) = -R_w^2*L^2*M^2*g*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-A(4,2) = L*K_phi*K_t*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
-A(4,3) = L*((M + m_w)*R_w^2 + I_w)*g*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-
-B(2,1) = R_w*K_t*(L^2*M + Iyy_g)*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
-B(4,1) = -L*K_t*R_w*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
-
-C(1,1) = 1; % x is measured (motor encoder)
-C(2,3) = 1; % theta is measured (IMU)
-
-% CT System
-ct_sys = ss(A,B,C,D);
-
-%% PID for Vertical Position: State Space Model (F/B Movement) - Continuous Time
+%% PID: State Space Model (F/B Movement) - Continuous Time
 % State:
 % [x] -> Robot distance travelled
 % [dx]
@@ -68,13 +39,13 @@ D = zeros(1,1);
 
 A(1,2) = 1;
 A(3,4) = 1;
-A(2,2) = -K_phi*K_t*(L^2*M + Iyy_g)*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
+A(2,2) = -K_phi*K_t*(L^2*M + Iyy_g)*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
 A(2,3) = -R_w^2*L^2*M^2*g*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-A(4,2) = L*K_phi*K_t*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
+A(4,2) = L*K_phi*K_t*M*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
 A(4,3) = L*((M + m_w)*R_w^2 + I_w)*g*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
 
-B(2,1) = R_w*K_t*(L^2*M + Iyy_g)*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
-B(4,1) = -L*K_t*R_w*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g))*1/R;
+B(2,1) = R_w*K_t*(L^2*M + Iyy_g)*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+B(4,1) = -L*K_t*R_w*M*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
 
 C(1,3) = 1; % x is measured (motor encoder)
 
@@ -87,12 +58,52 @@ dt_sys = c2d(ct_sys,Ts);
 [Ad, Bd, Cd, Dd, Ts_d] = ssdata(dt_sys);
 controlSystemDesigner(dt_sys);
 
+%% PID Gains
+
+Kd = F_Control.K * prod(F_Control.Z{1,1});
+Kp = F_Control.K * sum(F_Control.Z{1,1}) - 2 * Kd;
+Ki = F_Control.K - Kp - Kd;
+
+%% LQR: State Space Model (F/B Movement) - Continuous Time
+% State:
+% [x] -> Robot distance travelled
+% [dx]
+% [theta] -> Robot angle
+% [dtheta]
+% Init
+
+A = zeros(4,4);
+B = zeros(4,1);
+C = zeros(1,4);
+D = zeros(1,1);
+
+A(1,2) = 1;
+A(3,4) = 1;
+A(2,2) = -K_phi*K_t*(L^2*M + Iyy_g)*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+A(2,3) = -R_w^2*L^2*M^2*g*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+A(4,2) = L*K_phi*K_t*M*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+A(4,3) = L*((M + m_w)*R_w^2 + I_w)*g*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+
+B(2,1) = R_w*K_t*(L^2*M + Iyy_g)*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+B(4,1) = -L*K_t*R_w*M*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
+
+C(1,3) = 1; % x is measured (motor encoder)
+C(2,3) = 1; % theta is measured (IMU)
+
+% CT System
+ct_sys = ss(A,B,C,D);
+
+%% DT system from CT model
+% DT System
+dt_sys = c2d(ct_sys,Ts);
+[Ad, Bd, Cd, Dd, Ts_d] = ssdata(dt_sys);
+
 %% LQR Control with state tracking (infinite horizon)
 % Desired state
-ksi = [1;0;0;0];
+ksi = [0;0;0;0];
 % Cost for state and input 
-Q = diag([10 2 2 1]);
-R = 0.3;
+Q = diag([2 1 2 1]);
+R = 1;
 % Constant disturbance
 G = (Ad - eye(4))*ksi; % Last vector is desired state
 % Ricatti for M
@@ -100,39 +111,13 @@ G = (Ad - eye(4))*ksi; % Last vector is desired state
 % Disturbance vector
 r = mldivide(eye(4)-transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad), transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad)*M*G);
 
-%% PID Gains
-
-Kp = (-1)*sum(Con.Z{1,1})*Con.K;
-Ti = Kp/(prod(Con.Z{1,1})*Con.K);
-Td = Con.K/Kp;
-
-Kd = Kp * Td
-Ki = Kp / Ti
-
-%% 
-Mprev = 0;
-Mcurr = Q;
-
-Q = diag([10 3 2 1]);
-R = 0.5;
-
-i = 0;
-while ((i<100) & (max(abs(Mcurr-Mprev)) > 10^(-3)))
-    Mprev = Mcurr;
-    Mcurr = Q + transpose(Ad)*Mprev*Ad - transpose(Ad)*Mprev*Bd*inv(transpose(Bd)*Mprev*Bd+R)*transpose(Bd)*Mprev*Ad;
-    i = i+1;
-end
-x = [0.2;-0.1;-pi/72;0];
-ksi = [0;0;0;0];
-
-u = -(R+transpose(Bd)*Mcurr*Bd)\transpose(Bd)*(Mcurr*Ad*(x-ksi)+Mcurr*G+r);
-
 %% System simulation - LQR
 % Simulation time 
-Tend = 2;
+Tend = 4;
 
 % Initial conditions
-x = [0.2;-0.2;-pi/36;0];
+x = [0;0;-pi/72;0];
+y = x(3);
 t = 0:Ts:(Tend-Ts);
 
 % Simulation system
@@ -146,22 +131,13 @@ x_res = zeros(length(t_res), 4);
 x_res(1,:) = transpose(x);
 u_res = zeros(length(t_res), 1);
 
-% PID Control
-errorInt = 0;
-prevErr = x(3);
-
 % Simulation
 index = 2;
 u_index = 1;
 for i=t
     % Determine input (Feedback matrices included)
-    %u = -(R+transpose(Bd)*M*Bd)\transpose(Bd)*(M*Ad*(x-ksi)+M*G+r);
-    
-    % PID
-    errorInt = errorInt + y * Ts;
-    u = Kp * y + Kd * (y - prevErr) / Ts + Ki * errorInt;
-    prevErr = y;
-    
+    u = -(R+transpose(Bd)*M*Bd)\transpose(Bd)*(M*Ad*(x-ksi)+M*G+r);
+    %u = 0;
     % Input boundaries
     if abs(u)>12
         u = 12 * sign(u);
@@ -169,10 +145,7 @@ for i=t
     % Calculate system response (ZOH input)
     for j=i+Tsim:Tsim:i+Ts
         % System SS
-        % u = awgn(x(3),30,'measured'); % Add white gaussian noise to input
-        x = Asim*x+Bsim*u;
-        % x(3) = awgn(x(3),30,'measured'); % Add white gaussian noise to angle
-        y = Csim*x+Dsim*u;
+        x = SolveFODERK4(Tsim, u, x);
         % Store data
         x_res(index,:) = transpose(x);
         index = index + 1;
@@ -187,17 +160,32 @@ end
  set(gcf, 'Position',  [100, 100, 1500, 600]); % Set size of figure window
  shg; % Show graph
  for i=1:length(t_res)
-     plot([x_res(i,1),x_res(i,1)+L*sin(x_res(i,3))],[R_w,R_w+L*cos(x_res(i,3))],"ko-"); hold on;
-     plot([x_res(i,1),x_res(i,1)+R_w*sin(x_res(i,1)/R_w)],[R_w,R_w+R_w*cos(x_res(i,1)/R_w)],"k-");
-     th = 0:pi/20:2*pi;
-     plot(0.04 * cos(th) + x_res(i,1), 0.04 * sin(th) + R_w,"k-");
-     yline(0); hold off;
-     % Set axis parameters
-     xlim([-0.15 1.15]);
-     ylim([-0.1 0.3]);
-     pbaspect([3.25 1 1]);
-     % axis equal;
-     pause(0.0001);
+    % First subplot => input
+    figone = subplot(2,1,1);
+    % Plot corresponding input
+    plot(t_res(1:i), u_res(1:i),'-r','Linewidth',2); hold on;
+    yline(12);
+    yline(-12); hold off;
+    % Set axis parameters
+    xlim([0 t_res(end)]);
+    ylim([-15 15]);
+    pbaspect([3.25 1 1]);
+    % Additional information
+    title('MOTOR INPUT VOLTAGE');
+    xlabel('Time [s]');
+    ylabel('Voltage [V]'); 
+    % Second subplot => animation
+    figtwo = subplot(2,1,2); cla;
+    plot([x_res(i,1),x_res(i,1)+L*sin(x_res(i,3))],[R_w,R_w+L*cos(x_res(i,3))],"ko-"); hold on;
+    plot([x_res(i,1),x_res(i,1)+R_w*sin(x_res(i,1)/R_w)],[R_w,R_w+R_w*cos(x_res(i,1)/R_w)],"k-");
+    th = 0:pi/20:2*pi;
+    plot(0.04 * cos(th) + x_res(i,1), 0.04 * sin(th) + R_w,"k-");
+    yline(0); hold off;
+    % Set axis parameters
+    xlim([-0.3 1.15]);
+    ylim([-0.15 0.3]);
+    pbaspect([3.25 1 1]);
+    pause(0.00001); 
  end
 
 %% Initialize video
