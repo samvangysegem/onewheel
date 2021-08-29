@@ -47,7 +47,7 @@ A few hours of "being creative with incorrect dimensioning of bearing clearances
 ### :warning: Troubleshooting
 - Short circuit occured on the prototyping PCB during a motor test with battery supply. Upon closer inspection, the isolation of one of the motor wires melted during soldering. Solder from a wire next to it entered the isolation through this hole, nearly making contact with the other wire. Even though no short circuit was measured during testing, the higher current required for driving the motor in combination with slight wire movement (possibly) caused a short circuit between these two wires. As a result, a voltage of 12 V was applied to the GND output of the Teensy, resulting in a fried voltage regulator, IMU (also connected to this GND) in addition to internal damage of the Teensy.
 
-**Conclusion** 
+    **Conclusion** 
     - When wire isolation melted and unsure whether a short circuit will occur, assume the worst
     - Test motor interfaces first, without Teensy
 
@@ -56,6 +56,12 @@ A few hours of "being creative with incorrect dimensioning of bearing clearances
     - Increase the cost of the applied input
 
     The latter one earns my preference since it requires less rework to the model and code. The influence of these changes will first be verified in simulation before applying it to the actual model.
+
+    **Update** 
+    Upon further testing, the problem couldn't be solved as easily as described above. In order to debug this matter in a qualitative manner, following actions are required:
+     - Write a python script responsible for visualising and debugging the data sent via the serial interface
+     - Design filters for the measured data
+     - Debug the Kalman filter class
 
 
 
