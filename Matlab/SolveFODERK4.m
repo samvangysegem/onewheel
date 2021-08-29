@@ -5,9 +5,9 @@ function [X1] = SolveFODERK4(h, u, X0)
 % The function output is the new calculated state
 % Define model constants
 M = 1000*10^(-3); %[kg]
-L = 76*10^(-3); %[m]
-Iyy_g = 2358443*10^(-9); %[kg*m^2] = Lzz in Solidworks
-Ixx_g = 1284903*10^(-9); %[kg*m^2] = Lxx in Solidworks
+L = 82*10^(-3); %[m]
+Iyy_g = 2311756*10^(-9); %[kg*m^2] = Lzz in Solidworks
+Ixx_g = 1437327*10^(-9); %[kg*m^2] = Lxx in Solidworks
 m_w = 54*10^(-3); %[kg]
 R_w = 0.04; %[m] 
 I_w = (1/2)*m_w*(0.02^2+0.04^2); %[kg*m^2]

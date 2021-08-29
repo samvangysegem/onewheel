@@ -3,11 +3,13 @@ clc;
 clear all;
 
 %% Initialize values
+Ts = 1/20;
+
 % Onewheel
 M = 1000*10^(-3); %[kg]
-L = 76*10^(-3); %[m]
-Iyy_g = 2358443*10^(-9); %[kg*m^2] = Lzz in Solidworks
-Ixx_g = 1284903*10^(-9); %[kg*m^2] = Lxx in Solidworks
+L = 82*10^(-3); %[m]
+Iyy_g = 2311756*10^(-9); %[kg*m^2] = Lzz in Solidworks
+Ixx_g = 1437327*10^(-9); %[kg*m^2] = Lxx in Solidworks
 
 m_w = 54*10^(-3); %[kg]
 R_w = 0.04; %[m]
@@ -23,6 +25,45 @@ K_t = 0.158; %[Nm/A]
 
 % General
 g = 9.81;
+
+%% PID: State Space Model (F/B Movement) - Continuous Time
+% State:
+% [x] -> Robot distance travelled
+% [dx]
+% [theta] -> Robot angle
+% [dtheta]
+% Init
+
+A = zeros(4,4);
+B = zeros(4,1);
+C = zeros(1,4);
+D = zeros(1,1);
+
+A(1,2) = 1; % Link dphi to dphi
+A(3,4) = 1; % Link dalpha to dalpha
+A(2,1) = M*g*(L + R_w)*1/(Ixx_g + M*(L + R_w)^2);
+A(2,4) = -K_phi*K_t*1/(Ixx_g + M*(L + R_w)^2)*1/R;
+A(4,4) = K_t*K_phi*1/I_w*1/R;
+
+B(2,1) = K_t*1/R*1/(Ixx_g + M*(L + R_w)^2);
+B(4,1) = -K_t*1/I_w*1/R;
+
+C(1,1) = 1; % phi is measured (IMU)
+
+% CT System
+ct_sys = ss(A,B,C,D);
+
+%% DT system from CT model
+% DT System
+dt_sys = c2d(ct_sys,Ts);
+[Ad, Bd, Cd, Dd, Ts_d] = ssdata(dt_sys);
+controlSystemDesigner(dt_sys);
+
+%% PID Gains
+
+Kd = F_Control.K * prod(F_Control.Z{1,1});
+Kp = F_Control.K * sum(F_Control.Z{1,1}) - 2 * Kd;
+Ki = F_Control.K - Kp - Kd;
 
 %% State Space Model (Side Movement) - Continuous Time
 % State:
@@ -50,29 +91,6 @@ C(1,1) = 1; % phi is measured (IMU)
 C(2,3) = 1; % alpha is measured (motor encoder)
 
 ct_sys = ss(A,B,C,D);
-
-%% Animation
-%[K,S,e] = lqr(ct_sys,diag([1 1 0.05 0.05]),1); % Q only attributes small weight to rotation of wheel (try to limit speed)
-%ct_sys_cont = ss(A-B*K,B,C,D);
-%
-%x0 = [pi/36;0;0;0];
-%[y,t,x] = initial(ct_sys_cont,x0,5);
-%
-% Custom input
-%t_ss = linspace(0, 10, 1000);
-%u_ss = sin(3.1415*t_ss);
-%[y,t,x] = lsim(ct_sys_cont, u_ss, t_ss);
-%
-% Show animation
-%shg;
-%for i=1:length(t)
-%    plot([0,-L*sin(x(i,1))],[0,L*cos(x(i,1))],"ko-"); hold on;
-%    plot([-L*sin(x(i,1)),-L*sin(x(i,1))-0.04*sin(x(i,3))],[L*cos(x(i,1)),L*cos(x(i,1))+0.04*cos(x(i,3))],"ko-"); % circle representing flywheel
-%    th = 0:pi/50:2*pi;
-%    plot(0.04 * cos(th) - L*sin(x(i,1)), 0.04 * sin(th) + L*cos(x(i,1))); hold off;
-%    axis([-0.15 0.15 -0.1 0.2]);
-%    pause(0.001);
-%end
 
 %% LQR Control with state tracking (infinite horizon)
 % Samplefrequency
@@ -110,7 +128,7 @@ x = [pi/90;0;0;0];
 t = 0:Ts:(Tend-Ts);
 
 % Simulation system
-Tsim = 0.01;
+Tsim = 0.001;
 sim_sys = c2d(ct_sys, Tsim);
 [Asim, Bsim, Csim, Dsim] = ssdata(sim_sys);
 
@@ -133,10 +151,7 @@ for i=t
     % Calculate system response (ZOH input)
     for j=i+Tsim:Tsim:i+Ts
         % System SS
-        % u = awgn(x(3),30,'measured'); % Add white gaussian noise to input
-        x = Asim*x+Bsim*u;
-        % x(3) = awgn(x(3),30,'measured'); % Add white gaussian noise to angle
-        y = Csim*x+Dsim*u;
+        x = SolveSODERK4(Tsim, u, x);
         % Store data
         x_res(index,:) = transpose(x);
         index = index + 1;

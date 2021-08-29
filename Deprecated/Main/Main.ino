@@ -29,11 +29,11 @@
 // Installed libraries
 #include <assert.h>
 #include <Wire.h>
+#include <I2Cdev.h>
+#include <MPU6050_6Axis_MotionApps20.h>
 #include <Encoder.h>
 
 // Custom libraries
-#include "I2Cdev.h"
-#include "MPU6050_6Axis_MotionApps20.h"
 #include "Kalman.h"
 #include "LQR.h"
 
@@ -209,9 +209,9 @@ void MPUMath() {
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
-  YawVel = gyro.z / 32768.0 * 1000.0 * DEG_TO_RAD;
-  PitchVel = gyro.y / 32768.0 * 1000.0  * DEG_TO_RAD;
-  RollVel = gyro.x / 32768.0 * 1000.0  * DEG_TO_RAD;
+  YawVel = gyro.z / 32768.0 * 2000.0 * DEG_TO_RAD;
+  PitchVel = gyro.y / 32768.0 * 2000.0  * DEG_TO_RAD;
+  RollVel = gyro.x / 32768.0 * 2000.0  * DEG_TO_RAD;
   
   Yaw = ypr[0]; // Z
   Pitch = ypr[1]; // Y

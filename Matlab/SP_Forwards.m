@@ -8,9 +8,9 @@ Ts = 1/10;
 
 % Onewheel
 M = 1000*10^(-3); %[kg]
-L = 76*10^(-3); %[m]
-Iyy_g = 2358443*10^(-9); %[kg*m^2] = Lzz in Solidworks
-Ixx_g = 1284903*10^(-9); %[kg*m^2] = Lxx in Solidworks
+L = 82*10^(-3); %[m]
+Iyy_g = 2311756*10^(-9); %[kg*m^2] = Lzz in Solidworks
+Ixx_g = 1437327*10^(-9); %[kg*m^2] = Lxx in Solidworks
 
 m_w = 54*10^(-3); %[kg]
 R_w = 0.04; %[m] 
@@ -23,46 +23,6 @@ K_t = 0.158; %[Nm/A]
 
 % General
 g = 9.81;
-
-%% PID: State Space Model (F/B Movement) - Continuous Time
-% State:
-% [x] -> Robot distance travelled
-% [dx]
-% [theta] -> Robot angle
-% [dtheta]
-% Init
-
-A = zeros(4,4);
-B = zeros(4,1);
-C = zeros(1,4);
-D = zeros(1,1);
-
-A(1,2) = 1;
-A(3,4) = 1;
-A(2,2) = -K_phi*K_t*(L^2*M + Iyy_g)*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-A(2,3) = -R_w^2*L^2*M^2*g*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-A(4,2) = L*K_phi*K_t*M*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-A(4,3) = L*((M + m_w)*R_w^2 + I_w)*g*M*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-
-B(2,1) = R_w*K_t*(L^2*M + Iyy_g)*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-B(4,1) = -L*K_t*R_w*M*1/R*1/(((L^2*m_w + Iyy_g)*M + Iyy_g*m_w)*R_w^2 + I_w*(L^2*M + Iyy_g));
-
-C(1,3) = 1; % x is measured (motor encoder)
-
-% CT System
-ct_sys = ss(A,B,C,D);
-
-%% DT system from CT model
-% DT System
-dt_sys = c2d(ct_sys,Ts);
-[Ad, Bd, Cd, Dd, Ts_d] = ssdata(dt_sys);
-controlSystemDesigner(dt_sys);
-
-%% PID Gains
-
-Kd = F_Control.K * prod(F_Control.Z{1,1});
-Kp = F_Control.K * sum(F_Control.Z{1,1}) - 2 * Kd;
-Ki = F_Control.K - Kp - Kd;
 
 %% LQR: State Space Model (F/B Movement) - Continuous Time
 % State:
@@ -100,10 +60,10 @@ dt_sys = c2d(ct_sys,Ts);
 
 %% LQR Control with state tracking (infinite horizon)
 % Desired state
-ksi = [0;0;0;0];
+ksi = [1;0;0;0];
 % Cost for state and input 
-Q = diag([2 1 2 1]);
-R = 1;
+Q = diag([4 1 2 1]);
+R = 0.5;
 % Constant disturbance
 G = (Ad - eye(4))*ksi; % Last vector is desired state
 % Ricatti for M
@@ -113,7 +73,7 @@ r = mldivide(eye(4)-transpose(Ad-(Bd/(R+transpose(Bd)*M*Bd))*transpose(Bd)*M*Ad)
 
 %% System simulation - LQR
 % Simulation time 
-Tend = 4;
+Tend = 6;
 
 % Initial conditions
 x = [0;0;-pi/72;0];
