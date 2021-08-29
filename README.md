@@ -53,7 +53,7 @@ A few hours of "being creative with incorrect dimensioning of bearing clearances
 
 - LQR control currently is way to aggressive. The robot kinda wants to destroy itself upon receiving power and starting in "balance". There are two ways to address this problem (in my opinion):
     - Improve the model of the balancer
-    - Increase the cast of the applied input
+    - Increase the cost of the applied input
 
     The latter one earns my preference since it requires less rework to the model and code. The influence of these changes will first be verified in simulation before applying it to the actual model.
 
