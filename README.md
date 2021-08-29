@@ -20,7 +20,7 @@ The goal of this project is to build a one-wheeled robot from scratch. This incl
 - [ ] Countless hours of debugging untill this thing will work
 
 ### :computer: Simulation results
-Simulation of the LQR control responsible for balance in the forward direction: with initial conditions different from balance, its target state is at x = 1 in a balanced state. The LQR controller calculates the optimal input for an infinite optimisation horizon as this doesn't require trajectory tracking and corresponding optimisation.
+This simulation serves as a validation of the correct operation of the LQR controller. The simulation starts with an initial disturbance and ends in a balanced state in x = 1. The LQR control is evidently based on the linearised version of the state-space equations and calculates the optimal input for an infinite optimisation horizon. The simulation on the other hand is the result of numerically integrating the original nonlinear state space equations using a fourth-order Runge-Kutta method.
 
 ![Forward LQR Control](https://github.com/samvangysegem/onewheel/blob/main/Matlab/ForwardControl_Animation.gif)
  
@@ -45,9 +45,17 @@ A few hours of "being creative with incorrect dimensioning of bearing clearances
 ![](https://github.com/samvangysegem/onewheel/blob/main/Images/Assembly.JPG)
 
 ### :warning: Troubleshooting
-Short circuit occured on the prototyping PCB during a motor test with battery supply. Upon closer inspection, the isolation of one of the motor wires melted during soldering. Solder from a wire next to it entered the isolation through this hole, nearly making contact with the other wire. Even though no short circuit was measured during testing, the higher current required for driving the motor in combination with slight wire movement (possibly) caused a short circuit between these two wires. As a result, a voltage of 12 V was applied to the GND output of the Teensy, resulting in a fried voltage regulator, IMU (also connected to this GND) in addition to internal damage of the Teensy. 
+- Short circuit occured on the prototyping PCB during a motor test with battery supply. Upon closer inspection, the isolation of one of the motor wires melted during soldering. Solder from a wire next to it entered the isolation through this hole, nearly making contact with the other wire. Even though no short circuit was measured during testing, the higher current required for driving the motor in combination with slight wire movement (possibly) caused a short circuit between these two wires. As a result, a voltage of 12 V was applied to the GND output of the Teensy, resulting in a fried voltage regulator, IMU (also connected to this GND) in addition to internal damage of the Teensy.
 
 **Conclusion** 
-- When wire isolation melted and unsure whether a short circuit will occur, assume the worst
-- Test motor interfaces first, without Teensy
+    - When wire isolation melted and unsure whether a short circuit will occur, assume the worst
+    - Test motor interfaces first, without Teensy
+
+- LQR control currently is way to aggressive. The robot kinda wants to destroy itself upon receiving power and starting in "balance". There are two ways to address this problem (in my opinion):
+    - Improve the model of the balancer
+    - Increase the cast of the applied input
+
+    The latter one earns my preference since it requires less rework to the model and code. The influence of these changes will first be verified in simulation before applying it to the actual model.
+
+
 
