@@ -62,6 +62,6 @@ A few hours of "being creative with incorrect dimensioning of bearing clearances
      - Write a python script responsible for visualising and debugging the data sent via the serial interface
      - Design filters for the measured data
      - Debug the Kalman filter class
-
+    Additionally, some library files were added into the project folder itself as I changed some of the parameters of the MPU6050 in those libraries and this was the only way for the Arduino IDE to use the correct libraries.
 
 
