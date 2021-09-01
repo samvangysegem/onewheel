@@ -279,8 +279,6 @@ void driveMotor(float input, uint8_t portA, uint8_t portB) {
     analogWrite(portB, 0);
     return;
   }
-  // Constrain input to motor voltage
-  float constrainedInput = constrain(input, -12.0, 12.0);
   // Sign and Map to new range
   int8_t signInput = sgn(constrainedInput);
   uint16_t pwmInput = abs(constrainedInput) * 4095 / 12; // Automatically floored to int
@@ -407,13 +405,14 @@ void updateStates() {
 
 void computeInputs() {
   // LQR model for computing inputs
-  int its_F = LQR_F.computeInput(Obs_State_F, Des_State_F, U_F);
-  /*DPRINTSFN(10, " INPUT:", U_F, -6, 2);
-  DPRINTSFN(10, " ITS:", its, -6, 2);
-  DPRINTLN();*/
-  int its_S = LQR_S.computeInput(Obs_State_S, Des_State_S, U_S);
-  DPRINTSFN(10, " INPUT:", U_S, -6, 2);
-  DPRINTSFN(10, " ITS:", its_S, -6, 2);
+  int its_F = LQR_F.computeInput(State_F, Des_State_F, U_F);
+  int its_S = LQR_S.computeInput(State_S, Des_State_S, U_S);
+  // Constrain input to motor voltage (otherwise, Kalman filter won't be correct)
+  U_F = constrain(U_F, -12.0, 12.0);
+  U_S = constrain(U_S, -12.0, 12.0);
+  // Debugging purposes
+  DPRINTSFN(10, " INPUT_F:", U_F, -6, 2);
+  DPRINTSFN(10, " INPUT_S:", U_S, -6, 2);
   DPRINTLN();
 }
 
